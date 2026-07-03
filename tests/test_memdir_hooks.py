@@ -64,6 +64,7 @@ class MemdirHookTests(unittest.TestCase):
             project.mkdir()
             memdir_settings = _settings(tmp / "memdir")
             memdir_settings["embedding"] = {}
+            memdir_settings["extractor"] = {}
             memdir_settings["vector"] = {"dimensions": 96}
             settings = {"memdir": memdir_settings}
 

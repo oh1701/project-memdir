@@ -126,6 +126,22 @@ def _storage_settings() -> dict[str, Any]:
     return dict(raw_section) if isinstance(raw_section, dict) else {}
 
 
+def _project_root_settings() -> dict[str, Any]:
+    settings = memdir_settings()
+    raw_section = settings.get("project_root", {})
+    return dict(raw_section) if isinstance(raw_section, dict) else {}
+
+
+def _resolve_project_root(raw_cwd: str | os.PathLike[str] | None = None) -> pathlib.Path:
+    project_root = _project_root_settings()
+    strategy = str(project_root.get("strategy") or "cwd").strip().lower()
+    if strategy == "cwd":
+        return canonicalize_existing_path(raw_cwd or os.getcwd())
+    if strategy == "detect":
+        return detect_project_root(raw_cwd)
+    raise ValueError(f"unsupported memdir project_root strategy: {strategy}")
+
+
 def _resolve_python_launcher_command(command: list[str]) -> list[str]:
     if not command:
         return command
@@ -209,12 +225,12 @@ def is_memdir_enabled(raw_cwd: str | None = None) -> bool:
     settings = memdir_settings()
     if not settings.get("enabled", True):
         return False
-    project_root = detect_project_root(raw_cwd)
+    project_root = _resolve_project_root(raw_cwd)
     return _path_key(project_root) not in _disabled_project_root_keys()
 
 
-def resolve_project_paths(raw_cwd: str | None = None) -> dict[str, pathlib.Path]:
-    project_root = detect_project_root(raw_cwd)
+def resolve_project_paths(raw_cwd: str | os.PathLike[str] | None = None) -> dict[str, pathlib.Path]:
+    project_root = _resolve_project_root(raw_cwd)
     settings = memdir_settings()
     storage = _storage_settings()
     storage_mode = str(storage.get("mode") or "plugin").strip().lower()

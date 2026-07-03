@@ -10,6 +10,14 @@ max_relevant_memories = 3
 recent_fallback_items = 0
 min_relevant_score = 6
 
+# cwd: stores memory by the exact directory where the hook or CLI session starts.
+#      This is the default on POSIX and Windows, so subdirectories can have
+#      separate memory projects even when a parent contains Git or project files.
+# detect: walks upward from the session directory and uses project markers or Git
+#         to keep nested sessions grouped under the detected project root.
+[memdir.project_root]
+strategy = "cwd"
+
 # plugin: stores memories under the installed plugin cache:
 #   ${CODEX_ROOT}/memories/projects/<project-slug>
 # project: stores memories inside the active project:
@@ -54,10 +62,10 @@ query_cache_max_entries = 256
 # If a file-writing agent requires the prompt as an argument instead of stdin,
 # include `{prompt}` in that agent command.
 [memdir.extractor]
-provider = ""
+provider = "codex"
 timeout_sec = 90
 codex_bin = "codex"
-codex_model = "codex-default-model"
+codex_model = "gpt-5.3-codex-spark"
 
 agy_bin = "agy"
 agy_extraction_timeout_sec = 90

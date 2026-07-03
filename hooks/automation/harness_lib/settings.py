@@ -31,6 +31,9 @@ DEFAULTS: dict[str, Any] = {
         "user_prompt_submit_single_term_min_weight": 3.0,
         "vector": {},
         "embedding": {},
+        "project_root": {
+            "strategy": "cwd",
+        },
         "storage": {
             "mode": "plugin",
             "project_dir_name": ".project-memdir",
