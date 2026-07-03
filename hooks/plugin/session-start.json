@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/automation/memdir_hook.sh\" session-start",
+            "commandWindows": "py -3 \"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.py\" session-start",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

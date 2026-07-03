@@ -1,0 +1,37 @@
+{
+  "name": "project-memdir",
+  "version": "1.0.0",
+  "description": "Project-local memory injection and extraction helpers for Codex.",
+  "author": {
+    "name": "project-memdir maintainers"
+  },
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "hooks",
+    "memory",
+    "memdir"
+  ],
+  "skills": "./skills/",
+  "hooks": [
+    "./hooks/plugin/session-start.json",
+    "./hooks/plugin/user-prompt-submit.json",
+    "./hooks/plugin/stop.json"
+  ],
+  "interface": {
+    "displayName": "Project Memdir",
+    "shortDescription": "Register Codex hooks for project memory context injection and extraction.",
+    "longDescription": "Project Memdir registers SessionStart and UserPromptSubmit hooks that inject reusable project memories into Codex sessions, plus a Stop hook that queues memory extraction asynchronously.",
+    "developerName": "project-memdir maintainers",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Hooks",
+      "Context Injection",
+      "Memory"
+    ],
+    "defaultPrompt": [
+      "Use project memories in this repository."
+    ],
+    "screenshots": []
+  }
+}

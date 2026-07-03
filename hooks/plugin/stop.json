@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/automation/memdir_hook.sh\" stop",
+            "commandWindows": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${PLUGIN_ROOT}\\hooks\\automation\\memdir_stop_hidden.ps1\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

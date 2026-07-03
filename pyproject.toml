@@ -1,0 +1,10 @@
+[project]
+name = "project-memdir"
+version = "1.0.0"
+description = "Codex-only project-scoped long-term memory hooks"
+requires-python = ">=3.11"
+readme = "README.md"
+license = { file = "LICENSE" }
+
+[tool.pytest.ini_options]
+python_files = ["test_*.py"]

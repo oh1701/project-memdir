@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/automation/memdir_hook.sh\" user-prompt-submit",
+            "commandWindows": "py -3 \"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.py\" user-prompt-submit",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

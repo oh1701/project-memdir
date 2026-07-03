@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+venv/
+.worktrees/
+tmp/
+memories/
+tasks/
+sessions/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.jsonl
+.env
+.env.*
