@@ -112,6 +112,16 @@ When an extractor provider is configured, completed turns are queued by the Stop
 
 ## Storage
 
+Choose how the project root is resolved with `[memdir.project_root]` in `harness.toml`:
+
+```toml
+[memdir.project_root]
+# cwd: uses the exact directory where the Codex hook or CLI session starts.
+#      This is the default on POSIX and Windows.
+# detect: walks upward from that directory and uses project markers or Git.
+strategy = "cwd"
+```
+
 Choose where project memories are stored with `[memdir.storage]` in `harness.toml`:
 
 ```toml

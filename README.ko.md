@@ -112,6 +112,16 @@ extractor provider를 설정하면 완료된 턴은 Stop hook을 통해 queue에
 
 ## 저장 위치
 
+프로젝트 루트 판정 방식은 `harness.toml`의 `[memdir.project_root]`로 선택합니다.
+
+```toml
+[memdir.project_root]
+# cwd: Codex hook 또는 CLI 세션이 시작된 정확한 디렉터리를 사용합니다.
+#      POSIX와 Windows의 기본값입니다.
+# detect: 해당 디렉터리에서 위로 올라가며 프로젝트 마커나 Git을 사용합니다.
+strategy = "cwd"
+```
+
 프로젝트 메모리 저장 위치는 `harness.toml`의 `[memdir.storage]`로 선택합니다.
 
 ```toml

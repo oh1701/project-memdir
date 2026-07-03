@@ -112,6 +112,16 @@ timeout_sec = 15
 
 ## 存储
 
+project root 的解析方式由 `harness.toml` 中的 `[memdir.project_root]` 选择。
+
+```toml
+[memdir.project_root]
+# cwd: 使用 Codex hook 或 CLI session 启动时所在的精确目录。
+#      这是 POSIX 和 Windows 的默认值。
+# detect: 从该目录向上查找，并使用 project markers 或 Git。
+strategy = "cwd"
+```
+
 project memories 的存储位置由 `harness.toml` 中的 `[memdir.storage]` 选择。
 
 ```toml
