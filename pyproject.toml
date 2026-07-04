@@ -1,6 +1,6 @@
 [project]
 name = "project-memdir"
-version = "1.0.0"
+version = "1.0.1"
 description = "Codex-only project-scoped long-term memory hooks"
 requires-python = ">=3.11"
 readme = "README.md"
