@@ -21,25 +21,35 @@ codex plugin add project-memdir@project-memdir-local
 
 ## 配置
 
-plugin 随附的默认模板是 `harness.toml.example`。用户可编辑的配置文件存储在版本化 plugin cache 之外。
+plugin 随附的默认模板是 `harness.toml.example`。
+用户可编辑的配置文件存储在版本化 plugin cache 之外。
 
 ```text
 ~/.codex/project-memdir/harness.toml
 ```
 
-如果这个文件不存在，下一个 `SessionStart` hook 会从 `harness.toml.example` 自动创建它。如果想在安装后立即创建，请在当前 release 的 installed plugin cache path 中运行对应 OS 的命令。
+> **重要:** 如需使用 automatic memory extraction，必须在 `~/.codex/project-memdir/harness.toml` 中设置 `[memdir.extractor].provider`。
+> 如果没有设置该 provider，memory recall 仍会工作，但 turn 结束后的 extraction 会保持禁用。
+
+如果这个文件不存在，下一个 `SessionStart` hook 会从 `harness.toml.example` 自动创建它。
+如果想在安装后立即创建，请在当前 release 的 installed plugin cache path 中运行对应 OS 的命令。
 
 ```sh
 cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.3
 sh hooks/automation/memdir_cli.sh init-config
 ```
 
-```bat
-cd %USERPROFILE%\.codex\plugins\cache\project-memdir-local\project-memdir\1.0.3
-hooks\automation\memdir_cli.cmd init-config
+在 Windows 上，请以 PowerShell 为准执行。
+
+```powershell
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.3
+.\hooks\automation\memdir_cli.cmd init-config
 ```
 
-memory recall 会基于已经存在的 project memories 工作。每个 turn 后的 automatic extraction 在选择 extractor 前是禁用的。extraction 是把完成的 turn 整理成 topic JSON 的轻量任务，通常低成本模型就足够。若所选模型较慢，extraction 可能会延迟。
+memory recall 会基于已经存在的 project memories 工作。
+每个 turn 后的 automatic extraction 在选择 extractor 前是禁用的。
+extraction 是把完成的 turn 整理成 topic JSON 的轻量任务，通常低成本模型就足够。
+若所选模型较慢，extraction 可能会延迟。
 
 ```toml
 [memdir.extractor]
@@ -71,7 +81,8 @@ provider = "local_cli"
 local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 ```
 
-`local_cli_command` 用于填写能够直接创建 memory topic JSON files 的 agent CLI command。在这个设置中，`${CODEX_ROOT}` 会展开为 installed plugin directory。
+`local_cli_command` 用于填写能够直接创建 memory topic JSON files 的 agent CLI command。
+在这个设置中，`${CODEX_ROOT}` 会展开为 installed plugin directory。
 
 如果 extractor provider 或 model 配置错误，hook 可能会在后续 prompt context 中显示 `project-memdir memory extraction failed` 错误提示。
 

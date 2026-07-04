@@ -21,25 +21,35 @@ If Codex asks you to review hooks during installation or after an update, approv
 
 ## Configuration
 
-The plugin ships its default template as `harness.toml.example`. Your editable configuration is stored outside the versioned plugin cache:
+The plugin ships its default template as `harness.toml.example`.
+Your editable configuration is stored outside the versioned plugin cache:
 
 ```text
 ~/.codex/project-memdir/harness.toml
 ```
 
-If this file does not exist, the next `SessionStart` hook creates it from `harness.toml.example`. To create it immediately after installation, run the command for your OS from this release's installed plugin cache path.
+> **Important:** Automatic memory extraction requires `[memdir.extractor].provider` in `~/.codex/project-memdir/harness.toml`.
+> If you do not set this provider, memory recall still works but turn-end extraction remains disabled.
+
+If this file does not exist, the next `SessionStart` hook creates it from `harness.toml.example`.
+To create it immediately after installation, run the command for your OS from this release's installed plugin cache path.
 
 ```sh
 cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.3
 sh hooks/automation/memdir_cli.sh init-config
 ```
 
-```bat
-cd %USERPROFILE%\.codex\plugins\cache\project-memdir-local\project-memdir\1.0.3
-hooks\automation\memdir_cli.cmd init-config
+On Windows, use PowerShell:
+
+```powershell
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.3
+.\hooks\automation\memdir_cli.cmd init-config
 ```
 
-Memory recall uses the project memories that already exist. Automatic extraction after each turn is disabled until you choose an extractor. Extraction is a lightweight distillation task that turns completed turns into topic JSON, so a lower-cost model is usually enough. Extraction can be delayed if the selected model is slow:
+Memory recall uses the project memories that already exist.
+Automatic extraction after each turn is disabled until you choose an extractor.
+Extraction is a lightweight distillation task that turns completed turns into topic JSON, so a lower-cost model is usually enough.
+Extraction can be delayed if the selected model is slow:
 
 ```toml
 [memdir.extractor]
@@ -71,7 +81,8 @@ provider = "local_cli"
 local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 ```
 
-Set `local_cli_command` to an agent CLI command that can write memory topic JSON files. In this setting, `${CODEX_ROOT}` expands to the installed plugin directory.
+Set `local_cli_command` to an agent CLI command that can write memory topic JSON files.
+In this setting, `${CODEX_ROOT}` expands to the installed plugin directory.
 
 If the extractor provider or model is misconfigured, the hooks may show a `project-memdir memory extraction failed` notice in a later prompt context.
 
