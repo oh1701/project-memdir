@@ -182,3 +182,9 @@ project_dir_name = ".project-memdir"
 codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
+
+如果也要删除 user config 和已保存 memories，请删除 stable user data directory。
+
+```sh
+rm -rf ~/.codex/project-memdir
+```

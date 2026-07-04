@@ -182,3 +182,9 @@ Remove the plugin and marketplace source:
 codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
+
+To remove the user config and stored memories too, delete the stable user data directory:
+
+```sh
+rm -rf ~/.codex/project-memdir
+```

@@ -182,3 +182,9 @@ plugin と marketplace source を remove します。
 codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
+
+user config と保存済み memory も削除する場合は、stable user data directory を削除します。
+
+```sh
+rm -rf ~/.codex/project-memdir
+```
