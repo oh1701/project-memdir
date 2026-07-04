@@ -173,8 +173,16 @@ codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
 
-To remove the user config and stored memories too, delete the stable user data directory:
+To remove the user config and stored memories too, delete the stable user data directory.
+
+On macOS and Linux:
 
 ```sh
 rm -rf ~/.codex/project-memdir
+```
+
+On Windows PowerShell:
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\project-memdir" -ErrorAction SilentlyContinue
 ```

@@ -175,6 +175,14 @@ codex plugin marketplace remove project-memdir-local
 
 사용자 설정과 저장된 메모리까지 제거하려면 stable user data directory를 삭제합니다.
 
+macOS와 Linux:
+
 ```sh
 rm -rf ~/.codex/project-memdir
+```
+
+Windows PowerShell:
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\project-memdir" -ErrorAction SilentlyContinue
 ```
