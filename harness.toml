@@ -62,10 +62,11 @@ query_cache_max_entries = 256
 # If a file-writing agent requires the prompt as an argument instead of stdin,
 # include `{prompt}` in that agent command.
 [memdir.extractor]
-provider = "codex"
+provider = ""
+
 timeout_sec = 90
 codex_bin = "codex"
-codex_model = "gpt-5.3-codex-spark"
+codex_model = ""
 
 agy_bin = "agy"
 agy_extraction_timeout_sec = 90

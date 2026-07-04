@@ -27,8 +27,8 @@ class HarnessSettingsTests(unittest.TestCase):
         self.assertEqual(memdir["storage"]["project_dir_name"], ".project-memdir")
         self.assertEqual(memdir["vector"]["index_name"], "vector_index.sqlite3")
         self.assertEqual(memdir["embedding"]["model"], "@cf/google/embeddinggemma-300m")
-        self.assertEqual(memdir["extractor"]["provider"], "codex")
-        self.assertEqual(memdir["extractor"]["codex_model"], "gpt-5.3-codex-spark")
+        self.assertEqual(memdir["extractor"]["provider"], "")
+        self.assertEqual(memdir["extractor"]["codex_model"], "")
         self.assertEqual(memdir["extractor"]["agy_model"], "agy-default-model")
         self.assertEqual(memdir["extractor"]["local_cli_command"], 'python "${CODEX_ROOT}/examples/local_extractor.py"')
 
