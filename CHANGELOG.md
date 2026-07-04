@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4 - 2026-07-04
+
+- Emphasize that automatic memory extraction requires `[memdir.extractor].provider` in `${HOME}/.codex/project-memdir/harness.toml`.
+- Clarify Windows `init-config` documentation as PowerShell-based and use the `~/.codex/...` cache path form.
+- Expand UTF-8 reread guidance to any memdir file or recalled memdir content that appears garbled or misdecoded, and include that rule in memory extraction rules.
+
 ## 1.0.3 - 2026-07-04
 
 - Store default plugin-mode project memories under `${HOME}/.codex/project-memdir/memories/projects` so they are not tied to versioned plugin cache directories.
