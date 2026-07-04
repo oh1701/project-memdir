@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5 - 2026-07-04
+
+- Report missing or unsupported extractor providers as configurable `memdir_extract_failed` Stop hook warnings by default, while preserving opt-in fail and silent modes.
+- Bump release metadata and installed plugin cache path examples for the 1.0.5 release.
+
 ## 1.0.4 - 2026-07-04
 
 - Emphasize that automatic memory extraction requires `[memdir.extractor].provider` in `${HOME}/.codex/project-memdir/harness.toml`.
