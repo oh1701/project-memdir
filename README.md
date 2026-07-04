@@ -19,17 +19,6 @@ codex plugin add project-memdir@project-memdir-local
 
 If Codex asks you to review hooks during installation or after an update, approve the hooks for this plugin. Memory recall starts in new Codex sessions after hook approval.
 
-## Upgrade
-
-Refresh the configured Git marketplace snapshot, then reinstall the plugin from that source:
-
-```sh
-codex plugin marketplace upgrade project-memdir-local
-codex plugin add project-memdir@project-memdir-local
-```
-
-If Codex asks you to review hooks during or after the upgrade, approve the hooks for this plugin. Do not use `codex plugin remove` as a normal upgrade step. With the default `plugin` storage mode, project memories live under `~/.codex/project-memdir/memories/projects`, so they are separate from the versioned plugin cache.
-
 ## Configuration
 
 The plugin ships its default template as `harness.toml.example`. Your editable configuration is stored outside the versioned plugin cache:

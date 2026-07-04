@@ -1,18 +1,16 @@
 # project-memdir
 
-复用价值较低的信息或一次性问题不会被保存。
-
-用于在 Codex sessions 之间复用项目知识的 Codex 专用 project memory。
+用于在 Codex sessions 之间复用项目知识的 project memory。
 
 `project-memdir` 会安装 Codex hooks，在 session start 和 prompt submit 时加载相关 project memory。配置 extractor 后，每个 turn 结束时 Stop hook 会把 memory extraction 加入后台 queue。
 
-已保存的 memories 会作为参考上下文使用，因此可能带有少量不确定性。
+它只保存之后可能复用的项目相关信息。一次性问题或复用价值较低的细节不会被保存。已保存的 memories 会作为参考上下文注入，而不是作为确定事实。
 
 翻译: [English](README.md) | [Korean](README.ko.md) | [Japanese](README.ja.md)
 
 ## 安装
 
-安装 marketplace source 和 plugin。
+添加 Git marketplace source，然后从该 source 安装 plugin。
 
 ```sh
 codex plugin marketplace add https://github.com/oh1701/project-memdir
@@ -21,36 +19,27 @@ codex plugin add project-memdir@project-memdir-local
 
 如果 Codex 在安装或更新后要求 hook review，请批准此 plugin 的 hooks。批准后，新的 Codex session 会开始使用 memory recall。
 
-## 升级
-
-先刷新已配置的 Git marketplace snapshot，然后再次安装 plugin selector。
-
-```sh
-codex plugin marketplace upgrade project-memdir-local
-codex plugin add project-memdir@project-memdir-local
-```
-
-如果 Codex 在升级期间或升级后要求 hook review，请批准此 plugin 的 hooks。不要把 `codex plugin remove` 作为常规升级步骤。默认 `plugin` storage mode 会把 project memories 存储在 `~/.codex/project-memdir/memories/projects` 下，而不是版本化的 plugin cache 中。
-
 ## 配置
 
-plugin 的默认模板保留在 `harness.toml.example`。用户可编辑的配置文件位于版本化 plugin cache 之外。
+plugin 随附的默认模板是 `harness.toml.example`。用户可编辑的配置文件存储在版本化 plugin cache 之外。
 
 ```text
 ~/.codex/project-memdir/harness.toml
 ```
 
-如果这个文件不存在，下一个 `SessionStart` hook 会从 `harness.toml.example` 自动创建它。如果想在安装后立即创建，请在 installed plugin root 中运行对应 OS 的 CLI launcher。
+如果这个文件不存在，下一个 `SessionStart` hook 会从 `harness.toml.example` 自动创建它。如果想在安装后立即创建，请在当前 release 的 installed plugin cache path 中运行对应 OS 的命令。
 
 ```sh
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.3
 sh hooks/automation/memdir_cli.sh init-config
 ```
 
 ```bat
+cd %USERPROFILE%\.codex\plugins\cache\project-memdir-local\project-memdir\1.0.3
 hooks\automation\memdir_cli.cmd init-config
 ```
 
-memory recall 会基于已保存的 project memories 工作。每个 turn 后的 automatic memory extraction 在选择 extractor 前是禁用的。memory extraction 是把完成的 turn 整理成 topic JSON 的轻量任务，因此任何 extractor 都建议使用低成本模型。extraction time 可能会因所选模型的速度而延迟。
+memory recall 会基于已经存在的 project memories 工作。每个 turn 后的 automatic extraction 在选择 extractor 前是禁用的。extraction 是把完成的 turn 整理成 topic JSON 的轻量任务，通常低成本模型就足够。若所选模型较慢，extraction 可能会延迟。
 
 ```toml
 [memdir.extractor]
@@ -82,9 +71,9 @@ provider = "local_cli"
 local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 ```
 
-`local_cli_command` 用于填写能够直接创建记忆 topic JSON 文件的 agent CLI 执行命令。
+`local_cli_command` 用于填写能够直接创建 memory topic JSON files 的 agent CLI command。在这个设置中，`${CODEX_ROOT}` 会展开为 installed plugin directory。
 
-如果 extractor provider 或 model 配置错误，hook 可能会在下一次 prompt context 中显示 `project-memdir memory extraction failed` 错误提示。
+如果 extractor provider 或 model 配置错误，hook 可能会在后续 prompt context 中显示 `project-memdir memory extraction failed` 错误提示。
 
 ## Embeddings
 
@@ -116,7 +105,7 @@ timeout_sec = 15
 
 ## 使用
 
-完成安装和 hook approval 后，在项目中打开 Codex 即可。plugin 会检测当前 project，加载该 project 的 memdir，并只把相关 memories 注入 prompt context。
+完成安装和 hook approval 后，在项目中打开 Codex 即可。plugin 会检测当前 project，加载该 project 的 memory directory，并只把相关 memories 注入 prompt context。
 
 配置 extractor provider 后，完成的 turns 会通过 Stop hook 进入 queue，并在后台处理。extraction 不会阻塞当前 turn。
 
@@ -160,7 +149,9 @@ project_dir_name = ".project-memdir"
 - 可选：使用 `agy` extractor 时需要 `agy` CLI
 - 可选：使用 remote embeddings 时需要 Cloudflare Workers AI credentials
 
-在 macOS 和 Linux 上，installed hooks 使用 `sh` 和 bundled launcher，会先尝试 `python3`，再尝试 `python`。手动 CLI launcher 也使用相同的 POSIX fallback。在 Windows 上，installed hooks 会对 `SessionStart` 和 `UserPromptSubmit` 使用 `py -3`，手动 CLI launcher 会按 `py -3`、`python`、`python3` 的顺序尝试。`Stop` hook 使用 PowerShell 将 extraction 加入 queue，不会阻塞当前 turn。
+在 macOS 和 Linux 上，installed hooks 使用 `sh` 和 bundled launcher，会先尝试 `python3`，再尝试 `python`。手动 CLI launcher 也使用相同的 fallback 顺序。
+
+在 Windows 上，installed hooks 会对 `SessionStart` 和 `UserPromptSubmit` 使用 `py -3`，手动 CLI launcher 会按 `py -3`、`python`、`python3` 的顺序尝试。`Stop` hook 使用 PowerShell 将 extraction 加入 queue，不会阻塞当前 turn。
 
 ## 卸载
 
