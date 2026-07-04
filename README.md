@@ -1,18 +1,16 @@
 # project-memdir
 
-Low-reuse information and one-off questions are not stored.
-
-Codex-only project memory for reusing project-specific knowledge across sessions.
+Codex project memory for reusing project-specific knowledge across sessions.
 
 `project-memdir` installs Codex hooks that recall relevant project memories when a session starts or when you submit a prompt. After each turn, the Stop hook can queue memory extraction in the background when an extractor is configured.
 
-Stored memories are used as reference context, so they carry a small amount of uncertainty.
+It stores only project-specific information that is likely to be useful again. One-off questions and low-reuse details are not stored. Stored memories are injected as reference context, not as guaranteed facts.
 
 Translations: [Korean](README.ko.md) | [Japanese](README.ja.md) | [Simplified Chinese](README.zh-CN.md)
 
 ## Installation
 
-Install the marketplace source and plugin:
+Add the Git marketplace source, then install the plugin from that source:
 
 ```sh
 codex plugin marketplace add https://github.com/oh1701/project-memdir
@@ -23,34 +21,36 @@ If Codex asks you to review hooks during installation or after an update, approv
 
 ## Upgrade
 
-Refresh the configured Git marketplace snapshot, then install the plugin selector again:
+Refresh the configured Git marketplace snapshot, then reinstall the plugin from that source:
 
 ```sh
 codex plugin marketplace upgrade project-memdir-local
 codex plugin add project-memdir@project-memdir-local
 ```
 
-If Codex asks you to review hooks during or after the upgrade, approve the hooks for this plugin. Do not use `codex plugin remove` as a normal upgrade step. With the default `plugin` storage mode, project memories live under `~/.codex/project-memdir/memories/projects` rather than the versioned plugin cache.
+If Codex asks you to review hooks during or after the upgrade, approve the hooks for this plugin. Do not use `codex plugin remove` as a normal upgrade step. With the default `plugin` storage mode, project memories live under `~/.codex/project-memdir/memories/projects`, so they are separate from the versioned plugin cache.
 
 ## Configuration
 
-The plugin keeps its default template at `harness.toml.example`. Your editable configuration lives outside the versioned plugin cache:
+The plugin ships its default template as `harness.toml.example`. Your editable configuration is stored outside the versioned plugin cache:
 
 ```text
 ~/.codex/project-memdir/harness.toml
 ```
 
-If this file does not exist, the next `SessionStart` hook creates it from `harness.toml.example`. To create it immediately after installation, run the OS-specific CLI launcher from the installed plugin root:
+If this file does not exist, the next `SessionStart` hook creates it from `harness.toml.example`. To create it immediately after installation, run the command for your OS from this release's installed plugin cache path.
 
 ```sh
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.3
 sh hooks/automation/memdir_cli.sh init-config
 ```
 
 ```bat
+cd %USERPROFILE%\.codex\plugins\cache\project-memdir-local\project-memdir\1.0.3
 hooks\automation\memdir_cli.cmd init-config
 ```
 
-Memory recall works from the stored project memories. Automatic memory extraction after each turn is disabled until you choose an extractor. Memory extraction is a lightweight distillation task that turns completed turns into topic JSON, so a lower-cost model is recommended for any extractor. Extraction time can be delayed depending on the selected model's speed:
+Memory recall uses the project memories that already exist. Automatic extraction after each turn is disabled until you choose an extractor. Extraction is a lightweight distillation task that turns completed turns into topic JSON, so a lower-cost model is usually enough. Extraction can be delayed if the selected model is slow:
 
 ```toml
 [memdir.extractor]
@@ -82,9 +82,9 @@ provider = "local_cli"
 local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 ```
 
-`local_cli_command`에는 메모리 topic JSON 파일을 직접 생성할 수 있는 에이전트 CLI 실행 명령을 입력합니다.
+Set `local_cli_command` to an agent CLI command that can write memory topic JSON files. In this setting, `${CODEX_ROOT}` expands to the installed plugin directory.
 
-If the extractor provider or model is misconfigured, the hooks may show a `project-memdir memory extraction failed` notice in the next prompt context.
+If the extractor provider or model is misconfigured, the hooks may show a `project-memdir memory extraction failed` notice in a later prompt context.
 
 ## Embeddings
 
@@ -116,7 +116,7 @@ timeout_sec = 15
 
 ## Usage
 
-Open Codex in a project after installing and approving the hooks. The plugin detects the current project, loads that project's memdir, and injects only the relevant memories into the prompt context.
+Open Codex in a project after installing and approving the hooks. The plugin detects the current project, loads that project's memory directory, and injects only relevant memories into the prompt context.
 
 When an extractor provider is configured, completed turns are queued by the Stop hook and processed in the background. Extraction does not block the current turn.
 
@@ -160,7 +160,9 @@ Delete those files only when you intentionally want to remove stored memories.
 - Optional: `agy` CLI for the `agy` extractor
 - Optional: Cloudflare Workers AI credentials for remote embeddings
 
-On macOS and Linux, the installed hooks use `sh` and the bundled launcher, which tries `python3` and then `python`. The manual CLI launcher follows the same POSIX fallback behavior. On Windows, the installed hooks use `py -3` for `SessionStart` and `UserPromptSubmit`, and the manual CLI launcher tries `py -3`, `python`, then `python3`. The `Stop` hook uses PowerShell to queue extraction without blocking the turn.
+On macOS and Linux, the installed hooks use `sh` and the bundled launcher, which tries `python3` and then `python`. The manual CLI launcher uses the same fallback order.
+
+On Windows, the installed hooks use `py -3` for `SessionStart` and `UserPromptSubmit`, and the manual CLI launcher tries `py -3`, `python`, then `python3`. The `Stop` hook uses PowerShell to queue extraction without blocking the turn.
 
 ## Uninstall
 
