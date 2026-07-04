@@ -839,14 +839,11 @@ def _load_extraction_failure_notice(raw_cwd: str | None = None) -> str:
     payload = _load_json_document(get_extraction_status_path(raw_cwd))
     if not payload:
         return ""
-    provider = _compact_status_text(payload.get("provider"), 64) or "unknown"
-    model = _compact_status_text(payload.get("model"), 96) or "undefined"
     kind = _compact_status_text(payload.get("kind"), 64) or "extractor_failed"
     reason = _compact_status_text(payload.get("reason"), 96) or "extract_failed"
-    hint = _compact_status_text(payload.get("hint"), 180) or _extraction_failure_hint(kind)
     return (
-        "project-memdir memory extraction failed: "
-        f"provider={provider} model={model} kind={kind} reason={reason}. {hint}"
+        "previous project-memdir memory extraction failed: "
+        f"kind={kind} reason={reason}."
     )
 
 

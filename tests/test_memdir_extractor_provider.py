@@ -367,10 +367,58 @@ class MemdirExtractorProviderTests(unittest.TestCase):
 
         self.assertFalse(result["updated"])
         self.assertEqual(result["reason"], "agy_extraction_failed")
-        self.assertIn("project-memdir memory extraction failed", prompt_context["system_message"])
+        self.assertIn("previous project-memdir memory extraction failed", prompt_context["system_message"])
         self.assertIn("model_unavailable", prompt_context["system_message"])
-        self.assertIn("bad-model", prompt_context["system_message"])
-        self.assertNotIn("project-memdir memory extraction failed", session_context["additionalContext"])
+        self.assertIn("reason=agy_extraction_failed", prompt_context["system_message"])
+        self.assertNotIn("provider=", prompt_context["system_message"])
+        self.assertNotIn("model=", prompt_context["system_message"])
+        self.assertNotIn("bad-model", prompt_context["system_message"])
+        self.assertNotIn("Check the configured extractor model name", prompt_context["system_message"])
+        self.assertNotIn("previous project-memdir memory extraction failed", session_context["additionalContext"])
+
+    def test_previous_failure_notice_only_shows_kind_and_reason_when_extractor_unset(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+            memdir_settings = _settings(tmp / "memdir", "")
+
+            with mock.patch.object(memdir, "load_settings", return_value={"memdir": memdir_settings}):
+                ensured = memdir.ensure_project_memdir(str(project))
+                status_path = pathlib.Path(ensured["memdir"]) / memdir.EXTRACTION_STATUS_NAME
+                status_path.write_text(
+                    json.dumps(
+                        {
+                            "schema_version": 1,
+                            "provider": "agy",
+                            "model": "bad-model",
+                            "reason": "agy_extraction_failed",
+                            "kind": "model_unavailable",
+                            "detail": "model not found: bad-model",
+                            "hint": "Check the configured extractor model name and model access.",
+                            "updated_at": "2026-04-21T00:00:00Z",
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                prompt_context = memdir.build_memdir_context(
+                    "next prompt",
+                    str(project),
+                    include_core_paths=False,
+                    require_lexical_match=False,
+                )
+
+        notice = prompt_context["system_message"]
+        self.assertEqual(
+            notice,
+            "previous project-memdir memory extraction failed: "
+            "kind=model_unavailable reason=agy_extraction_failed.",
+        )
+        self.assertNotIn("provider=", notice)
+        self.assertNotIn("model=", notice)
+        self.assertNotIn("bad-model", notice)
+        self.assertNotIn("Check the configured extractor model name", notice)
 
     def test_successful_extraction_clears_previous_failure_notice(self) -> None:
         attempts = 0
@@ -432,10 +480,10 @@ class MemdirExtractorProviderTests(unittest.TestCase):
                 )
 
         self.assertEqual(failed["reason"], "agy_extraction_failed")
-        self.assertIn("project-memdir memory extraction failed", failed_context["system_message"])
+        self.assertIn("previous project-memdir memory extraction failed", failed_context["system_message"])
         self.assertIn("quota_exceeded", failed_context["system_message"])
         self.assertIn(succeeded["reason"], {"ok", "no_changes"})
-        self.assertNotIn("project-memdir memory extraction failed", prompt_context["system_message"])
+        self.assertNotIn("previous project-memdir memory extraction failed", prompt_context["system_message"])
 
     def test_local_cli_provider_sends_prompt_to_file_agent_on_stdin(self) -> None:
         captured: dict[str, object] = {}
