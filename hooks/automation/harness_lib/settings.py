@@ -53,6 +53,13 @@ DEFAULTS: dict[str, Any] = {
             "codex_model": "codex-default-model",
             "agy_model": "agy-default-model",
         },
+        "stop_hook": {
+            "provider_error_mode": "warn",
+            "provider_error_message": (
+                "memdir_extract_failed: {detail}; skipping turn memory extraction. "
+                "Set [memdir.extractor].provider to {supported_providers} in {config_path}."
+            ),
+        },
     },
 }
 

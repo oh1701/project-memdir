@@ -84,7 +84,17 @@ local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 `local_cli_command`에는 메모리 topic JSON 파일을 직접 생성할 수 있는 에이전트 CLI 실행 명령을 입력합니다.
 이 설정에서 `${CODEX_ROOT}`는 설치된 plugin 디렉터리로 확장됩니다.
 
-extractor provider가 없거나 지원되지 않으면 Stop hook이 즉시 실패합니다. 설정된 extractor가 queue 처리 중 실패하면 이후 prompt context에서 `project-memdir memory extraction failed` 에러 문구가 표시될 수 있습니다.
+기본적으로 extractor provider가 없거나 지원되지 않으면 Stop hook warning으로 알리고 exit 0으로 종료합니다. 그래서 Codex는 generic `hook exited with code 1` 실패 배너를 표시하지 않습니다.
+
+```toml
+[memdir.stop_hook]
+provider_error_mode = "warn"
+provider_error_message = "memdir_extract_failed: {detail}; skipping turn memory extraction. Set [memdir.extractor].provider to {supported_providers} in {config_path}."
+```
+
+`provider_error_mode = "fail"`을 사용하면 nonzero Stop hook 실패를 유지하고, `"silent"`를 사용하면 이 warning을 생략합니다. 메시지는 `{detail}`, `{reason}`, `{provider}`, `{supported_providers}`, `{config_path}` placeholder를 지원합니다.
+
+설정된 extractor가 queue 처리 중 실패하면 이후 prompt context에서 `project-memdir memory extraction failed` 에러 문구가 표시될 수 있습니다.
 
 ## Embeddings
 

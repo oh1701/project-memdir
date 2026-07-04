@@ -74,3 +74,12 @@ agy_model = "agy-default-model"
 
 local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 local_cli_extraction_timeout_sec = 30
+
+# Controls how Stop hook reports missing or unsupported extractor providers.
+# - "warn": print provider_error_message and exit 0, avoiding Codex's generic hook failure banner.
+# - "fail": print provider_error_message and exit 1.
+# - "silent": print nothing and exit 0.
+# The message supports {detail}, {reason}, {provider}, {supported_providers}, and {config_path}.
+[memdir.stop_hook]
+provider_error_mode = "warn"
+provider_error_message = "memdir_extract_failed: {detail}; skipping turn memory extraction. Set [memdir.extractor].provider to {supported_providers} in {config_path}."

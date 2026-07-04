@@ -160,7 +160,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         fake_subprocess.Popen.assert_not_called()
         self.assertIn("[memdir_notify] queued=already_queued background_drain=skipped", stderr.getvalue())
 
-    def test_stop_hook_fails_without_extractor_provider(self) -> None:
+    def test_stop_hook_warns_without_extractor_provider_by_default(self) -> None:
         module = _load_module("memdir_stop_missing_provider_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
         payload = {
             "hookEventName": "Stop",
@@ -182,17 +182,17 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         ):
             exit_code = module.main()
 
-        self.assertEqual(exit_code, 1)
+        self.assertEqual(exit_code, 0)
         enabled.assert_not_called()
         enqueue.assert_not_called()
         fake_subprocess.Popen.assert_not_called()
         self.assertIn(
-            "[memdir_extract_stop] failed: missing [memdir.extractor].provider; set it to codex, agy or local_cli in",
+            "memdir_extract_failed: missing [memdir.extractor].provider; skipping turn memory extraction.",
             stderr.getvalue(),
         )
         self.assertIn(".codex/project-memdir/harness.toml", stderr.getvalue())
 
-    def test_stop_hook_fails_with_unsupported_extractor_provider(self) -> None:
+    def test_stop_hook_warns_with_unsupported_extractor_provider_by_default(self) -> None:
         module = _load_module("memdir_stop_unsupported_provider_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
         payload = {
             "hookEventName": "Stop",
@@ -214,15 +214,91 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         ):
             exit_code = module.main()
 
-        self.assertEqual(exit_code, 1)
+        self.assertEqual(exit_code, 0)
         enabled.assert_not_called()
         enqueue.assert_not_called()
         fake_subprocess.Popen.assert_not_called()
         self.assertIn(
-            "[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: bogus; set it to codex, agy or local_cli in",
+            "memdir_extract_failed: unsupported [memdir.extractor].provider: bogus; skipping turn memory extraction.",
             stderr.getvalue(),
         )
         self.assertIn(".codex/project-memdir/harness.toml", stderr.getvalue())
+
+    def test_stop_hook_provider_error_fail_mode_preserves_nonzero_exit(self) -> None:
+        module = _load_module("memdir_stop_fail_provider_error_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        payload = {
+            "hookEventName": "Stop",
+            "cwd": "/tmp/project",
+            "thread-id": "thread-1",
+            "input-messages": [{"role": "user", "content": "remember this"}],
+            "last-assistant-message": "ok",
+        }
+        stderr = io.StringIO()
+
+        with (
+            mock.patch.object(
+                module,
+                "load_settings",
+                return_value={
+                    "memdir": {
+                        "extractor": {"provider": ""},
+                        "stop_hook": {
+                            "provider_error_mode": "fail",
+                            "provider_error_message": "memdir_extract_failed: {reason} in {config_path}",
+                        },
+                    }
+                },
+                create=True,
+            ),
+            mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True) as enabled,
+            mock.patch.object(module.memdir_notify, "enqueue_memdir_extraction_job", create=True) as enqueue,
+            mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+            mock.patch.object(module.sys, "stderr", stderr),
+        ):
+            exit_code = module.main()
+
+        self.assertEqual(exit_code, 1)
+        enabled.assert_not_called()
+        enqueue.assert_not_called()
+        self.assertIn(
+            "memdir_extract_failed: missing_provider in",
+            stderr.getvalue(),
+        )
+
+    def test_stop_hook_provider_error_silent_mode_suppresses_output(self) -> None:
+        module = _load_module("memdir_stop_silent_provider_error_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        payload = {
+            "hookEventName": "Stop",
+            "cwd": "/tmp/project",
+            "thread-id": "thread-1",
+            "input-messages": [{"role": "user", "content": "remember this"}],
+            "last-assistant-message": "ok",
+        }
+        stderr = io.StringIO()
+
+        with (
+            mock.patch.object(
+                module,
+                "load_settings",
+                return_value={
+                    "memdir": {
+                        "extractor": {"provider": "bogus"},
+                        "stop_hook": {"provider_error_mode": "silent"},
+                    }
+                },
+                create=True,
+            ),
+            mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True) as enabled,
+            mock.patch.object(module.memdir_notify, "enqueue_memdir_extraction_job", create=True) as enqueue,
+            mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+            mock.patch.object(module.sys, "stderr", stderr),
+        ):
+            exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        enabled.assert_not_called()
+        enqueue.assert_not_called()
+        self.assertEqual(stderr.getvalue(), "")
 
     def test_stop_hook_queues_event_and_starts_detached_drain(self) -> None:
         module = _load_module("memdir_stop_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")

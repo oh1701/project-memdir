@@ -84,7 +84,17 @@ local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 Set `local_cli_command` to an agent CLI command that can write memory topic JSON files.
 In this setting, `${CODEX_ROOT}` expands to the installed plugin directory.
 
-If the extractor provider is missing or unsupported, the Stop hook fails immediately. If a configured extractor fails while processing the queue, later prompt context may show a `project-memdir memory extraction failed` notice.
+By default, a missing or unsupported extractor provider is reported as a Stop hook warning and exits 0, so Codex does not show the generic `hook exited with code 1` failure banner:
+
+```toml
+[memdir.stop_hook]
+provider_error_mode = "warn"
+provider_error_message = "memdir_extract_failed: {detail}; skipping turn memory extraction. Set [memdir.extractor].provider to {supported_providers} in {config_path}."
+```
+
+Use `provider_error_mode = "fail"` to preserve the nonzero Stop hook failure, or `"silent"` to skip this warning. The message supports `{detail}`, `{reason}`, `{provider}`, `{supported_providers}`, and `{config_path}` placeholders.
+
+If a configured extractor fails while processing the queue, later prompt context may show a `project-memdir memory extraction failed` notice.
 
 ## Embeddings
 
