@@ -29,7 +29,7 @@ plugin은 기본 템플릿을 `harness.toml.example`로 제공합니다.
 ```
 
 > **중요:** 자동 메모리 추출을 사용하려면 `~/.codex/project-memdir/harness.toml`에 `[memdir.extractor].provider`를 반드시 설정해야 합니다.
-> 이 provider를 설정하지 않으면 메모리 recall은 동작하지만 턴 종료 후 추출은 비활성화된 상태로 남습니다.
+> 이 provider를 설정하지 않으면 메모리 recall은 동작하지만 Stop hook은 턴 종료 추출 준비를 실패로 처리합니다.
 
 이 파일이 없으면 다음 `SessionStart` hook이 `harness.toml.example`에서 자동 생성합니다.
 설치 직후 바로 만들고 싶으면 이 릴리스가 설치된 plugin cache path에서 OS별 명령을 실행합니다.
@@ -47,7 +47,7 @@ cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.4
 ```
 
 메모리 recall은 이미 저장된 프로젝트 메모리를 기준으로 동작합니다.
-각 턴 이후 자동 메모리 추출은 extractor를 선택하기 전까지 비활성화되어 있습니다.
+각 턴 이후 자동 메모리 추출은 Stop hook이 작업을 queue에 넣기 전에 지원되는 extractor 설정을 요구합니다.
 메모리 추출은 완료된 턴을 topic JSON으로 정리하는 가벼운 작업이므로 보통 저비용 모델로 충분합니다.
 선택한 모델이 느리면 추출이 지연될 수 있습니다.
 
@@ -84,7 +84,7 @@ local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 `local_cli_command`에는 메모리 topic JSON 파일을 직접 생성할 수 있는 에이전트 CLI 실행 명령을 입력합니다.
 이 설정에서 `${CODEX_ROOT}`는 설치된 plugin 디렉터리로 확장됩니다.
 
-extractor provider나 model을 잘못 설정하면 이후 prompt context에서 hook이 `project-memdir memory extraction failed` 에러 문구를 표시할 수 있습니다.
+extractor provider가 없거나 지원되지 않으면 Stop hook이 즉시 실패합니다. 설정된 extractor가 queue 처리 중 실패하면 이후 prompt context에서 `project-memdir memory extraction failed` 에러 문구가 표시될 수 있습니다.
 
 ## Embeddings
 

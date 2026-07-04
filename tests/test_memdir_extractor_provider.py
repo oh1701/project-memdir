@@ -133,6 +133,30 @@ class MemdirExtractorProviderTests(unittest.TestCase):
         self.assertIn("The current working directory is the topics directory.", captured.get("prompt"))
         run_codex.assert_called_once()
 
+    def test_extract_event_fails_when_extractor_provider_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+            settings = {"memdir": _settings(tmp / "memdir", "")}
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value=settings),
+                mock.patch.object(memdir, "_extract_with_agy", side_effect=AssertionError("agy fallback should not run")) as extract_agy,
+            ):
+                result = memdir.extract_memories_from_event(
+                    raw_cwd=str(project),
+                    user_text="remember this",
+                    assistant_text="ok",
+                    thread_id="thread-missing-provider",
+                )
+
+        self.assertFalse(result["updated"])
+        self.assertEqual(result["reason"], "missing_extractor_provider")
+        self.assertEqual(result["thread_id"], "thread-missing-provider")
+        extract_agy.assert_not_called()
+
     def test_codex_provider_uses_cli_default_for_default_model_sentinel(self) -> None:
         captured: dict[str, object] = {}
 

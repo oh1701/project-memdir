@@ -17,9 +17,10 @@ from harness_lib.settings import HARNESS_CONFIG_PATH, load_settings  # noqa: E40
 
 
 MISSING_EXTRACTOR_PROVIDER_MESSAGE = (
-    "[memdir_extract_stop] skipped: missing [memdir.extractor].provider; "
+    "[memdir_extract_stop] failed: missing [memdir.extractor].provider; "
     f"set it to codex, agy or local_cli in {HARNESS_CONFIG_PATH}"
 )
+SUPPORTED_EXTRACTOR_PROVIDERS = {"codex", "agy", "local_cli"}
 
 
 def _first_present(payload: dict[str, Any], keys: tuple[str, ...]) -> Any:
@@ -214,9 +215,16 @@ def main() -> int:
         return 0
     if not _is_stop_payload(payload):
         return 0
-    if not _extractor_provider():
+    extractor_provider = _extractor_provider().lower()
+    if not extractor_provider:
         sys.stderr.write(f"{MISSING_EXTRACTOR_PROVIDER_MESSAGE}\n")
-        return 0
+        return 1
+    if extractor_provider not in SUPPORTED_EXTRACTOR_PROVIDERS:
+        sys.stderr.write(
+            "[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: "
+            f"{extractor_provider}; set it to codex, agy or local_cli in {HARNESS_CONFIG_PATH}\n"
+        )
+        return 1
 
     event = _normalize_stop_payload(payload)
     result = memdir_notify.queue_agent_turn_complete_event(

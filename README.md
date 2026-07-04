@@ -29,7 +29,7 @@ Your editable configuration is stored outside the versioned plugin cache:
 ```
 
 > **Important:** Automatic memory extraction requires `[memdir.extractor].provider` in `~/.codex/project-memdir/harness.toml`.
-> If you do not set this provider, memory recall still works but turn-end extraction remains disabled.
+> If you do not set this provider, memory recall still works but the Stop hook fails turn-end extraction setup.
 
 If this file does not exist, the next `SessionStart` hook creates it from `harness.toml.example`.
 To create it immediately after installation, run the command for your OS from this release's installed plugin cache path.
@@ -47,7 +47,7 @@ cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.4
 ```
 
 Memory recall uses the project memories that already exist.
-Automatic extraction after each turn is disabled until you choose an extractor.
+Automatic extraction after each turn requires a supported extractor before the Stop hook can queue work.
 Extraction is a lightweight distillation task that turns completed turns into topic JSON, so a lower-cost model is usually enough.
 Extraction can be delayed if the selected model is slow:
 
@@ -84,7 +84,7 @@ local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 Set `local_cli_command` to an agent CLI command that can write memory topic JSON files.
 In this setting, `${CODEX_ROOT}` expands to the installed plugin directory.
 
-If the extractor provider or model is misconfigured, the hooks may show a `project-memdir memory extraction failed` notice in a later prompt context.
+If the extractor provider is missing or unsupported, the Stop hook fails immediately. If a configured extractor fails while processing the queue, later prompt context may show a `project-memdir memory extraction failed` notice.
 
 ## Embeddings
 

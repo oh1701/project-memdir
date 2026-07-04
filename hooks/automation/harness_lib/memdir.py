@@ -2092,7 +2092,19 @@ def extract_memories_from_event(
     vector_db = pathlib.Path(ensured["vector_db"])
     before = _snapshot_storage_files(memdir, topics_dir, manifest_path, vector_db)
     existing_memories = format_memory_manifest(scan_topic_files(raw_cwd))
-    extractor = str(_extractor_settings().get("provider") or "agy").strip().lower()
+    extractor = str(_extractor_settings().get("provider") or "").strip().lower()
+    if not extractor:
+        result = {
+            "reason": "missing_extractor_provider",
+            "error": f"missing [memdir.extractor].provider in {HARNESS_CONFIG_PATH}",
+        }
+        _record_extraction_failure_status(memdir, "undefined", result)
+        return {
+            "updated": False,
+            "reason": "missing_extractor_provider",
+            "thread_id": thread_id,
+            "memdir": str(memdir),
+        }
     if extractor == "codex":
         result = _extract_with_codex(
             memdir=memdir,
