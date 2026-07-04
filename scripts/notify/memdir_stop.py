@@ -16,13 +16,11 @@ import memdir_notify  # noqa: E402
 from harness_lib.settings import HARNESS_CONFIG_PATH, load_settings  # noqa: E402
 
 
-SUPPORTED_EXTRACTOR_PROVIDERS = {"codex", "agy", "local_cli"}
-PROVIDER_ERROR_MODES = {"fail", "warn", "silent"}
-DEFAULT_PROVIDER_ERROR_MODE = "warn"
-DEFAULT_PROVIDER_ERROR_MESSAGE = (
-    "memdir_extract_failed: {detail}; skipping turn memory extraction. "
-    "Set [memdir.extractor].provider to {supported_providers} in {config_path}."
+MISSING_EXTRACTOR_PROVIDER_MESSAGE = (
+    "[memdir_extract_stop] failed: missing [memdir.extractor].provider; "
+    f"set it to codex, agy or local_cli in {HARNESS_CONFIG_PATH}"
 )
+SUPPORTED_EXTRACTOR_PROVIDERS = {"codex", "agy", "local_cli"}
 
 
 def _first_present(payload: dict[str, Any], keys: tuple[str, ...]) -> Any:
@@ -205,43 +203,11 @@ def _extractor_provider(settings: dict[str, Any]) -> str:
     return str(extractor.get("provider") or "").strip()
 
 
-def _stop_hook_settings(settings: dict[str, Any]) -> dict[str, Any]:
-    stop_hook = _memdir_settings(settings).get("stop_hook")
-    return stop_hook if isinstance(stop_hook, dict) else {}
-
-
-def _provider_error_mode(settings: dict[str, Any]) -> str:
-    mode = str(_stop_hook_settings(settings).get("provider_error_mode") or DEFAULT_PROVIDER_ERROR_MODE).strip().lower()
-    return mode if mode in PROVIDER_ERROR_MODES else DEFAULT_PROVIDER_ERROR_MODE
-
-
-def _provider_error_detail(reason: str, provider: str) -> str:
-    if reason == "unsupported_provider":
-        return f"unsupported [memdir.extractor].provider: {provider}"
-    return "missing [memdir.extractor].provider"
-
-
-def _provider_error_message(settings: dict[str, Any], *, reason: str, provider: str) -> str:
-    template = str(_stop_hook_settings(settings).get("provider_error_message") or DEFAULT_PROVIDER_ERROR_MESSAGE)
-    detail = _provider_error_detail(reason, provider)
-    context = {
-        "config_path": str(HARNESS_CONFIG_PATH),
-        "detail": detail,
-        "provider": provider,
-        "reason": reason,
-        "supported_providers": "codex, agy, or local_cli",
-    }
-    try:
-        return template.format(**context)
-    except (KeyError, ValueError):
-        return template
-
-
-def _handle_provider_error(settings: dict[str, Any], *, reason: str, provider: str = "") -> int:
-    mode = _provider_error_mode(settings)
-    if mode != "silent":
-        sys.stderr.write(f"{_provider_error_message(settings, reason=reason, provider=provider)}\n")
-    return 1 if mode == "fail" else 0
+def _unsupported_extractor_provider_message(provider: str) -> str:
+    return (
+        f"[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: {provider}; "
+        f"set it to codex, agy or local_cli in {HARNESS_CONFIG_PATH}"
+    )
 
 
 def main() -> int:
@@ -263,9 +229,11 @@ def main() -> int:
     settings = load_settings()
     extractor_provider = _extractor_provider(settings).lower()
     if not extractor_provider:
-        return _handle_provider_error(settings, reason="missing_provider")
+        sys.stderr.write(f"{MISSING_EXTRACTOR_PROVIDER_MESSAGE}\n")
+        return 1
     if extractor_provider not in SUPPORTED_EXTRACTOR_PROVIDERS:
-        return _handle_provider_error(settings, reason="unsupported_provider", provider=extractor_provider)
+        sys.stderr.write(f"{_unsupported_extractor_provider_message(extractor_provider)}\n")
+        return 1
 
     event = _normalize_stop_payload(payload)
     result = memdir_notify.queue_agent_turn_complete_event(

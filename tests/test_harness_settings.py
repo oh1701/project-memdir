@@ -23,7 +23,7 @@ class HarnessSettingsTests(unittest.TestCase):
         payload = tomllib.loads((ROOT / "harness.toml.example").read_text(encoding="utf-8"))
         memdir = payload["memdir"]
 
-        self.assertEqual(sorted(key for key, value in memdir.items() if isinstance(value, dict)), ["embedding", "extractor", "project_root", "stop_hook", "storage", "vector"])
+        self.assertEqual(sorted(key for key, value in memdir.items() if isinstance(value, dict)), ["embedding", "extractor", "project_root", "storage", "vector"])
         self.assertEqual(memdir["base_dir"], "${HOME}/.codex/project-memdir/memories/projects")
         self.assertEqual(memdir["project_root"]["strategy"], "cwd")
         self.assertEqual(memdir["storage"]["mode"], "plugin")
@@ -34,9 +34,6 @@ class HarnessSettingsTests(unittest.TestCase):
         self.assertEqual(memdir["extractor"]["codex_model"], "")
         self.assertEqual(memdir["extractor"]["agy_model"], "agy-default-model")
         self.assertEqual(memdir["extractor"]["local_cli_command"], 'python "${CODEX_ROOT}/examples/local_extractor.py"')
-        self.assertEqual(memdir["stop_hook"]["provider_error_mode"], "warn")
-        self.assertIn("memdir_extract_failed:", memdir["stop_hook"]["provider_error_message"])
-
         legacy_root_keys = {
             "vector_index_name",
             "vector_index_backend",
