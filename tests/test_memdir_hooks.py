@@ -57,6 +57,12 @@ def _load_hook_module():
 
 
 class MemdirHookTests(unittest.TestCase):
+    def test_memory_rules_instruct_utf8_reread_for_garbled_memdir_files(self) -> None:
+        self.assertIn(
+            "If any memdir file or recalled memdir content appears garbled or misdecoded, read the source explicitly as UTF-8.",
+            memdir._memory_rules(),
+        )
+
     def test_session_start_core_context_uses_session_start_hook_output(self) -> None:
         with tempfile.TemporaryDirectory() as raw_tmp:
             tmp = pathlib.Path(raw_tmp)

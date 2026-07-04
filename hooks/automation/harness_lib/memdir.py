@@ -75,6 +75,7 @@ MEMORY_RULE_LINES = [
     "Reference-only, not a durable source of truth.",
     "manifest.json and Prologue are the core pair; read them together on session start.",
     "topics/*.json holds reference notes; use injected summaries first and reread only the relevant items when the summary is insufficient.",
+    "If any memdir file or recalled memdir content appears garbled or misdecoded, read the source explicitly as UTF-8.",
     "For memdir settings requests, prefer script files or the Prologue first; update topic JSON only when the user explicitly asks or when a script or Prologue change would break a reference.",
     "Topic JSON schema: schema_version, id, name, description, type, content, keywords, updated_at, last_thread_id.",
     "Types: user, feedback, project, reference.",
