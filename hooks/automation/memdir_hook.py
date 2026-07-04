@@ -70,6 +70,14 @@ def _session_start() -> int:
     payload = _read_json_payload()
     cwd = _payload_cwd(payload)
     _refresh_scheduler_if_available()
+    try:
+        from harness_lib.settings import ensure_user_harness_config  # noqa: PLC0415
+
+        config_init = ensure_user_harness_config()
+        if config_init.get("created"):
+            print(f"[memdir_session_start] created user config: {config_init.get('path')}", file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[memdir_session_start] config init skipped: {type(exc).__name__}: {exc}", file=sys.stderr)
 
     try:
         from harness_lib.memdir import build_session_start_context  # noqa: PLC0415

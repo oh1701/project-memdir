@@ -17,11 +17,14 @@ from harness_lib import memdir, settings as harness_settings  # noqa: E402
 
 
 class HarnessSettingsTests(unittest.TestCase):
-    def test_harness_toml_uses_nested_memdir_runtime_sections(self) -> None:
-        payload = tomllib.loads((ROOT / "harness.toml").read_text(encoding="utf-8"))
+    def test_harness_example_uses_nested_memdir_runtime_sections(self) -> None:
+        self.assertFalse((ROOT / "harness.toml").exists())
+
+        payload = tomllib.loads((ROOT / "harness.toml.example").read_text(encoding="utf-8"))
         memdir = payload["memdir"]
 
         self.assertEqual(sorted(key for key, value in memdir.items() if isinstance(value, dict)), ["embedding", "extractor", "project_root", "storage", "vector"])
+        self.assertEqual(memdir["base_dir"], "${HOME}/.codex/project-memdir/memories/projects")
         self.assertEqual(memdir["project_root"]["strategy"], "cwd")
         self.assertEqual(memdir["storage"]["mode"], "plugin")
         self.assertEqual(memdir["storage"]["project_dir_name"], ".project-memdir")
@@ -52,6 +55,72 @@ class HarnessSettingsTests(unittest.TestCase):
         }
         self.assertFalse(legacy_root_keys.intersection(memdir))
 
+    def test_load_settings_merges_bundled_example_then_user_config(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            bundled_path = tmp / "harness.toml.example"
+            user_path = tmp / "user" / "harness.toml"
+            user_path.parent.mkdir()
+            bundled_path.write_text(
+                "\n".join(
+                    [
+                        "[memdir]",
+                        'base_dir = "${CODEX_ROOT}/bundled-memories"',
+                        "max_relevant_memories = 7",
+                        "",
+                        "[memdir.extractor]",
+                        'provider = "codex"',
+                        'codex_model = "bundled-model"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            user_path.write_text(
+                "\n".join(
+                    [
+                        "[memdir]",
+                        'base_dir = "${HOME}/user-memories"',
+                        "",
+                        "[memdir.extractor]",
+                        'provider = "agy"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                mock.patch.object(harness_settings, "BUNDLED_HARNESS_TEMPLATE_PATH", bundled_path),
+                mock.patch.object(harness_settings, "HARNESS_CONFIG_PATH", user_path),
+            ):
+                loaded = harness_settings.load_settings()
+
+        self.assertEqual(loaded["memdir"]["base_dir"], str(pathlib.Path.home() / "user-memories"))
+        self.assertEqual(loaded["memdir"]["max_relevant_memories"], 7)
+        self.assertEqual(loaded["memdir"]["extractor"]["provider"], "agy")
+        self.assertEqual(loaded["memdir"]["extractor"]["codex_model"], "bundled-model")
+
+    def test_ensure_user_harness_config_copies_example_without_overwriting(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            bundled_path = tmp / "harness.toml.example"
+            user_path = tmp / "config" / "harness.toml"
+            bundled_path.write_text("[memdir]\nenabled = true\n", encoding="utf-8")
+
+            with (
+                mock.patch.object(harness_settings, "BUNDLED_HARNESS_TEMPLATE_PATH", bundled_path),
+                mock.patch.object(harness_settings, "HARNESS_CONFIG_PATH", user_path),
+            ):
+                created = harness_settings.ensure_user_harness_config()
+                user_path.write_text("[memdir]\nenabled = false\n", encoding="utf-8")
+                existing = harness_settings.ensure_user_harness_config()
+                user_config_text = user_path.read_text(encoding="utf-8")
+
+        self.assertTrue(created["created"])
+        self.assertEqual(created["path"], str(user_path))
+        self.assertEqual(created["source"], str(bundled_path))
+        self.assertFalse(existing["created"])
+        self.assertEqual(user_config_text, "[memdir]\nenabled = false\n")
+
     def test_default_codex_sandbox_is_danger_full_access(self) -> None:
         with tempfile.TemporaryDirectory() as raw_tmp:
             harness_path = pathlib.Path(raw_tmp) / "missing-harness.toml"
@@ -60,6 +129,10 @@ class HarnessSettingsTests(unittest.TestCase):
                 loaded = harness_settings.load_settings()
 
         self.assertEqual(loaded["memdir"]["extractor"]["codex_sandbox"], "danger-full-access")
+        self.assertEqual(
+            pathlib.Path(loaded["memdir"]["base_dir"]),
+            pathlib.Path.home() / ".codex" / "project-memdir" / "memories" / "projects",
+        )
         self.assertEqual(loaded["memdir"]["project_root"]["strategy"], "cwd")
         self.assertEqual(loaded["memdir"]["storage"]["mode"], "plugin")
         self.assertEqual(loaded["memdir"]["storage"]["project_dir_name"], ".project-memdir")

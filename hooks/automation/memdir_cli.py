@@ -18,6 +18,7 @@ from harness_lib.memdir import (
     scan_topic_files,
 )
 from harness_lib.memdir_queue import drain_memdir_extraction_queue
+from harness_lib.settings import ensure_user_harness_config
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,6 +48,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     reset_state_cmd = sub.add_parser("reset-session-state")
     reset_state_cmd.add_argument("--cwd", default=None)
+
+    sub.add_parser("init-config")
 
     extract_cmd = sub.add_parser("extract-event")
     extract_cmd.add_argument("--cwd", required=True)
@@ -79,6 +82,8 @@ def main() -> int:
         payload = get_memdir_session_state(args.cwd)
     elif args.command == "reset-session-state":
         payload = reset_memdir_session_state(args.cwd)
+    elif args.command == "init-config":
+        payload = ensure_user_harness_config()
     elif args.command == "extract-event":
         payload = extract_memories_from_event(
             raw_cwd=args.cwd,

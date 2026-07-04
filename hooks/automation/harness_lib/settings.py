@@ -1,5 +1,5 @@
 # Function: Provide the memdir settings loader.
-# Purpose: Merge root harness.toml with defaults so memdir features use consistent settings.
+# Purpose: Merge bundled and user harness config with defaults so memdir features use consistent settings.
 from __future__ import annotations
 
 import copy
@@ -10,12 +10,22 @@ from typing import Any
 
 
 CODEX_ROOT = pathlib.Path(__file__).resolve().parents[3]
-HARNESS_CONFIG_PATH = CODEX_ROOT / "harness.toml"
+BUNDLED_HARNESS_TEMPLATE_PATH = CODEX_ROOT / "harness.toml.example"
+
+
+def _default_codex_home() -> pathlib.Path:
+    raw_home = os.environ.get("CODEX_HOME")
+    if raw_home:
+        return pathlib.Path(os.path.expandvars(raw_home)).expanduser()
+    return pathlib.Path.home() / ".codex"
+
+
+HARNESS_CONFIG_PATH = _default_codex_home() / "project-memdir" / "harness.toml"
 
 DEFAULTS: dict[str, Any] = {
     "memdir": {
         "enabled": True,
-        "base_dir": str(CODEX_ROOT / "memories" / "memdir" / "projects"),
+        "base_dir": str(pathlib.Path.home() / ".codex" / "project-memdir" / "memories" / "projects"),
         "disabled_project_roots": [],
         "graph_db_name": "{project_slug}.sqlite3",
         "max_entrypoint_lines": 200,
@@ -155,12 +165,46 @@ def _normalize_memdir_runtime_sections(payload: dict[str, Any]) -> None:
         embedding["timeout_sec"] = embedding["CLOUDFLARE_TIMEOUT_SEC"]
 
 
+def _merge_toml_file(payload: dict[str, Any], config_path: pathlib.Path) -> dict[str, Any]:
+    if not config_path.exists():
+        return payload
+    with config_path.open("rb") as handle:
+        loaded = tomllib.load(handle)
+    if isinstance(loaded, dict):
+        _normalize_memdir_runtime_sections(loaded)
+        return _deep_merge(payload, loaded)
+    return payload
+
+
+def ensure_user_harness_config() -> dict[str, Any]:
+    result = {
+        "created": False,
+        "path": str(HARNESS_CONFIG_PATH),
+        "source": str(BUNDLED_HARNESS_TEMPLATE_PATH),
+    }
+    if HARNESS_CONFIG_PATH.exists():
+        result["reason"] = "exists"
+        return result
+    if not BUNDLED_HARNESS_TEMPLATE_PATH.exists():
+        result["reason"] = "missing_template"
+        return result
+
+    HARNESS_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    template_bytes = BUNDLED_HARNESS_TEMPLATE_PATH.read_bytes()
+    try:
+        with HARNESS_CONFIG_PATH.open("xb") as handle:
+            handle.write(template_bytes)
+    except FileExistsError:
+        result["reason"] = "exists"
+        return result
+
+    result["created"] = True
+    return result
+
+
 def load_settings() -> dict[str, Any]:
     payload = copy.deepcopy(DEFAULTS)
-    if HARNESS_CONFIG_PATH.exists():
-        with HARNESS_CONFIG_PATH.open("rb") as handle:
-            loaded = tomllib.load(handle)
-        if isinstance(loaded, dict):
-            payload = _deep_merge(payload, loaded)
+    payload = _merge_toml_file(payload, BUNDLED_HARNESS_TEMPLATE_PATH)
+    payload = _merge_toml_file(payload, HARNESS_CONFIG_PATH)
     _normalize_memdir_runtime_sections(payload)
     return _expand_value(payload)

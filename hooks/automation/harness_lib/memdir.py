@@ -19,7 +19,7 @@ from typing import Any
 
 from .codex_exec import run_codex_exec
 from .paths import canonicalize_existing_path, detect_project_root, project_slug
-from .settings import CODEX_ROOT, load_settings
+from .settings import CODEX_ROOT, HARNESS_CONFIG_PATH, load_settings
 from .utils import atomic_write_json, ensure_dir, utc_now_iso
 
 
@@ -809,7 +809,7 @@ def _extraction_failure_hint(kind: str) -> str:
         "auth_failed": "Check API access, login state, or credentials for the configured extractor.",
         "model_unavailable": "Check the configured extractor model name and model access.",
     }
-    return hints.get(kind, "Check token limits, API access, or the configured model name in harness.toml.")
+    return hints.get(kind, f"Check token limits, API access, or the configured model name in {HARNESS_CONFIG_PATH}.")
 
 
 def _record_extraction_failure_status(memdir: pathlib.Path, extractor: str, result: dict[str, Any]) -> None:

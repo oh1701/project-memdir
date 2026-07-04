@@ -13,12 +13,12 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import memdir_notify  # noqa: E402
-from harness_lib.settings import load_settings  # noqa: E402
+from harness_lib.settings import HARNESS_CONFIG_PATH, load_settings  # noqa: E402
 
 
 MISSING_EXTRACTOR_PROVIDER_MESSAGE = (
     "[memdir_extract_stop] skipped: missing [memdir.extractor].provider; "
-    "set it to codex, agy or local_cli in harness.toml"
+    f"set it to codex, agy or local_cli in {HARNESS_CONFIG_PATH}"
 )
 
 

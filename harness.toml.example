@@ -1,6 +1,6 @@
 [memdir]
 enabled = true
-base_dir = "${CODEX_ROOT}/memories/projects"
+base_dir = "${HOME}/.codex/project-memdir/memories/projects"
 manifest_name = "manifest.json"
 topics_dir_name = "topics"
 max_entrypoint_lines = 200
@@ -18,8 +18,8 @@ min_relevant_score = 6
 [memdir.project_root]
 strategy = "cwd"
 
-# plugin: stores memories under the installed plugin cache:
-#   ${CODEX_ROOT}/memories/projects/<project-slug>
+# plugin: stores memories under a stable user data directory:
+#   ${HOME}/.codex/project-memdir/memories/projects/<project-slug>
 # project: stores memories inside the active project:
 #   <project-root>/.project-memdir
 [memdir.storage]
@@ -39,7 +39,7 @@ min_similarity = 0.2
 # committing secrets:
 #   export CLOUDFLARE_ACCOUNT_ID="..."
 #   export CLOUDFLARE_API_TOKEN="..."
-# Or configure local values here only when this file is private:
+# Or configure local values in your user config copy only when that file is private:
 #   CLOUDFLARE_ACCOUNT_ID = "..."
 #   CLOUDFLARE_API_TOKEN = "..."
 [memdir.embedding]

@@ -30,14 +30,24 @@ codex plugin marketplace upgrade project-memdir-local
 codex plugin add project-memdir@project-memdir-local
 ```
 
-If Codex asks you to review hooks during or after the upgrade, approve the hooks for this plugin. Do not use `codex plugin remove` as a normal upgrade step. If your storage mode is `plugin`, back up `~/.codex/plugins/cache/.../memories/projects` before removing the installed plugin.
+If Codex asks you to review hooks during or after the upgrade, approve the hooks for this plugin. Do not use `codex plugin remove` as a normal upgrade step. With the default `plugin` storage mode, project memories live under `~/.codex/project-memdir/memories/projects` rather than the versioned plugin cache.
 
 ## Configuration
 
-After installation, edit the installed plugin's `harness.toml` under the Codex plugin cache:
+The plugin keeps its default template at `harness.toml.example`. Your editable configuration lives outside the versioned plugin cache:
 
 ```text
-~/.codex/plugins/cache/.../project-memdir/.../harness.toml
+~/.codex/project-memdir/harness.toml
+```
+
+If this file does not exist, the next `SessionStart` hook creates it from `harness.toml.example`. To create it immediately after installation, run the OS-specific CLI launcher from the installed plugin root:
+
+```sh
+sh hooks/automation/memdir_cli.sh init-config
+```
+
+```bat
+hooks\automation\memdir_cli.cmd init-config
 ```
 
 Memory recall works from the stored project memories. Automatic memory extraction after each turn is disabled until you choose an extractor. Memory extraction is a lightweight distillation task that turns completed turns into topic JSON, so a lower-cost model is recommended for any extractor. Extraction time can be delayed depending on the selected model's speed:
@@ -87,7 +97,7 @@ export CLOUDFLARE_ACCOUNT_ID="..."
 export CLOUDFLARE_API_TOKEN="..."
 ```
 
-If the installed `harness.toml` is private to your machine, you can also set credentials directly:
+If your user `harness.toml` is private to your machine, you can also set credentials directly:
 
 ```toml
 [memdir.embedding]
@@ -95,7 +105,7 @@ CLOUDFLARE_ACCOUNT_ID = "..."
 CLOUDFLARE_API_TOKEN = "..."
 ```
 
-Non-secret embedding defaults can stay in `harness.toml`:
+Non-secret embedding defaults can stay in your user `harness.toml`:
 
 ```toml
 [memdir.embedding]
@@ -112,7 +122,7 @@ When an extractor provider is configured, completed turns are queued by the Stop
 
 ## Storage
 
-Choose how the project root is resolved with `[memdir.project_root]` in `harness.toml`:
+Choose how the project root is resolved with `[memdir.project_root]` in your user `harness.toml`:
 
 ```toml
 [memdir.project_root]
@@ -122,12 +132,12 @@ Choose how the project root is resolved with `[memdir.project_root]` in `harness
 strategy = "cwd"
 ```
 
-Choose where project memories are stored with `[memdir.storage]` in `harness.toml`:
+Choose where project memories are stored with `[memdir.storage]` in your user `harness.toml`:
 
 ```toml
 [memdir.storage]
-# plugin: stores memories under the installed plugin cache:
-#   ${CODEX_ROOT}/memories/projects/<project-slug>
+# plugin: stores memories under a stable user data directory:
+#   ${HOME}/.codex/project-memdir/memories/projects/<project-slug>
 # project: stores memories inside the active project:
 #   <project-root>/.project-memdir
 mode = "plugin"
@@ -150,7 +160,7 @@ Delete those files only when you intentionally want to remove stored memories.
 - Optional: `agy` CLI for the `agy` extractor
 - Optional: Cloudflare Workers AI credentials for remote embeddings
 
-On macOS and Linux, the installed hooks use `sh` and the bundled launcher, which tries `python3` and then `python`. On Windows, the installed hooks use `py -3` for `SessionStart` and `UserPromptSubmit`. The `Stop` hook uses PowerShell to queue extraction without blocking the turn.
+On macOS and Linux, the installed hooks use `sh` and the bundled launcher, which tries `python3` and then `python`. The manual CLI launcher follows the same POSIX fallback behavior. On Windows, the installed hooks use `py -3` for `SessionStart` and `UserPromptSubmit`, and the manual CLI launcher tries `py -3`, `python`, then `python3`. The `Stop` hook uses PowerShell to queue extraction without blocking the turn.
 
 ## Uninstall
 

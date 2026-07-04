@@ -163,6 +163,43 @@ class MemdirHookTests(unittest.TestCase):
         self.assertNotIn("embeddingModel", emitted["hookSpecificOutput"])
         self.assertIn("[memdir_session_start] embedding=memdir-local-hash", stderr.getvalue())
 
+    def test_session_start_hook_bootstraps_user_harness_config(self) -> None:
+        module = _load_hook_module()
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        payload = {"cwd": "/tmp/project"}
+
+        with (
+            mock.patch.object(module, "_refresh_scheduler_if_available"),
+            mock.patch(
+                "harness_lib.settings.ensure_user_harness_config",
+                return_value={
+                    "created": True,
+                    "path": "/Users/example/.codex/project-memdir/harness.toml",
+                    "source": "/plugin/harness.toml.example",
+                },
+            ) as ensure_config,
+            mock.patch.object(
+                memdir,
+                "build_session_start_context",
+                return_value={
+                    "hookEventName": "SessionStart",
+                    "additionalContext": "Session context",
+                    "embeddingModel": "",
+                },
+            ),
+            mock.patch.object(sys, "stdin", io.StringIO(json.dumps(payload))),
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(stderr),
+        ):
+            code = module._session_start()
+
+        self.assertEqual(code, 0)
+        ensure_config.assert_called_once_with()
+        emitted = json.loads(stdout.getvalue())
+        self.assertEqual(emitted["hookSpecificOutput"]["additionalContext"], "Session context")
+        self.assertIn("[memdir_session_start] created user config: /Users/example/.codex/project-memdir/harness.toml", stderr.getvalue())
+
     def test_user_prompt_submit_preserves_context_output(self) -> None:
         module = _load_hook_module()
         stdout = io.StringIO()
@@ -412,12 +449,29 @@ class MemdirHookTests(unittest.TestCase):
         self.assertIn("sys.executable", router)
         self.assertNotIn('["python3"', router)
 
-    def test_automation_payload_does_not_ship_shell_helpers(self) -> None:
+    def test_automation_payload_only_ships_launcher_shell_helpers(self) -> None:
         shell_helpers = sorted(
             path.relative_to(ROOT).as_posix() for path in (ROOT / "hooks" / "automation").glob("*.sh")
         )
 
-        self.assertEqual(shell_helpers, ["hooks/automation/memdir_hook.sh"])
+        self.assertEqual(shell_helpers, ["hooks/automation/memdir_cli.sh", "hooks/automation/memdir_hook.sh"])
+
+    def test_cli_launchers_use_os_specific_python_fallbacks(self) -> None:
+        posix_launcher = (ROOT / "hooks" / "automation" / "memdir_cli.sh").read_text(encoding="utf-8")
+        windows_launcher = (ROOT / "hooks" / "automation" / "memdir_cli.cmd").read_text(encoding="utf-8")
+
+        self.assertIn("#!/bin/sh", posix_launcher)
+        self.assertIn("memdir_cli.py", posix_launcher)
+        self.assertIn("python3", posix_launcher)
+        self.assertIn("python", posix_launcher)
+        self.assertNotIn("py -3", posix_launcher)
+        self.assertNotIn("||", posix_launcher)
+
+        self.assertIn("memdir_cli.py", windows_launcher)
+        self.assertIn("py -3", windows_launcher)
+        self.assertIn("python", windows_launcher)
+        self.assertIn("python3", windows_launcher)
+        self.assertNotIn("||", windows_launcher)
 
     def test_readmes_stay_user_facing_without_manual_cli_or_shell_helper(self) -> None:
         readmes = ["README.md", "README.ko.md", "README.ja.md", "README.zh-CN.md"]

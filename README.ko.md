@@ -30,14 +30,24 @@ codex plugin marketplace upgrade project-memdir-local
 codex plugin add project-memdir@project-memdir-local
 ```
 
-업그레이드 중 또는 이후 Codex가 hook review를 요구하면 이 plugin의 hook을 승인하세요. 일반 업그레이드 절차에서 `codex plugin remove`를 사용하지 마세요. 저장 모드가 `plugin`이면 설치된 plugin을 제거하기 전에 `~/.codex/plugins/cache/.../memories/projects`를 백업하세요.
+업그레이드 중 또는 이후 Codex가 hook review를 요구하면 이 plugin의 hook을 승인하세요. 일반 업그레이드 절차에서 `codex plugin remove`를 사용하지 마세요. 기본 `plugin` 저장 모드에서는 프로젝트 메모리가 버전별 plugin cache가 아니라 `~/.codex/project-memdir/memories/projects` 아래에 저장됩니다.
 
 ## 설정
 
-설치 후 Codex plugin cache 아래에 설치된 plugin의 `harness.toml`을 수정합니다.
+plugin의 기본 템플릿은 `harness.toml.example`에 둡니다. 사용자가 수정하는 설정 파일은 버전별 plugin cache 밖에 있습니다.
 
 ```text
-~/.codex/plugins/cache/.../project-memdir/.../harness.toml
+~/.codex/project-memdir/harness.toml
+```
+
+이 파일이 없으면 다음 `SessionStart` hook이 `harness.toml.example`에서 자동 생성합니다. 설치 직후 바로 만들고 싶으면 설치된 plugin root에서 OS별 CLI launcher를 실행합니다.
+
+```sh
+sh hooks/automation/memdir_cli.sh init-config
+```
+
+```bat
+hooks\automation\memdir_cli.cmd init-config
 ```
 
 메모리 recall은 저장된 프로젝트 메모리를 기준으로 동작합니다. 각 턴 이후 자동 메모리 추출은 extractor를 선택하기 전까지 비활성화되어 있습니다. 메모리 추출은 완료된 턴을 topic JSON으로 정리하는 가벼운 작업이므로 모든 extractor에서 저비용 모델 사용을 권장합니다. 추출 시간은 선택한 모델 속도에 따라 지연될 수 있습니다.
@@ -87,7 +97,7 @@ export CLOUDFLARE_ACCOUNT_ID="..."
 export CLOUDFLARE_API_TOKEN="..."
 ```
 
-설치된 `harness.toml`이 내 PC에서만 쓰이는 private 파일이라면 직접 넣을 수도 있습니다.
+사용자 `harness.toml`이 내 PC에서만 쓰이는 private 파일이라면 직접 넣을 수도 있습니다.
 
 ```toml
 [memdir.embedding]
@@ -95,7 +105,7 @@ CLOUDFLARE_ACCOUNT_ID = "..."
 CLOUDFLARE_API_TOKEN = "..."
 ```
 
-secret이 아닌 embedding 기본값은 `harness.toml`에 둘 수 있습니다.
+secret이 아닌 embedding 기본값은 사용자 `harness.toml`에 둘 수 있습니다.
 
 ```toml
 [memdir.embedding]
@@ -112,7 +122,7 @@ extractor provider를 설정하면 완료된 턴은 Stop hook을 통해 queue에
 
 ## 저장 위치
 
-프로젝트 루트 판정 방식은 `harness.toml`의 `[memdir.project_root]`로 선택합니다.
+프로젝트 루트 판정 방식은 사용자 `harness.toml`의 `[memdir.project_root]`로 선택합니다.
 
 ```toml
 [memdir.project_root]
@@ -122,12 +132,12 @@ extractor provider를 설정하면 완료된 턴은 Stop hook을 통해 queue에
 strategy = "cwd"
 ```
 
-프로젝트 메모리 저장 위치는 `harness.toml`의 `[memdir.storage]`로 선택합니다.
+프로젝트 메모리 저장 위치는 사용자 `harness.toml`의 `[memdir.storage]`로 선택합니다.
 
 ```toml
 [memdir.storage]
-# plugin: 설치된 plugin cache 아래에 저장합니다:
-#   ${CODEX_ROOT}/memories/projects/<project-slug>
+# plugin: 안정적인 사용자 데이터 디렉터리 아래에 저장합니다:
+#   ${HOME}/.codex/project-memdir/memories/projects/<project-slug>
 # project: 현재 프로젝트 내부에 저장합니다:
 #   <project-root>/.project-memdir
 mode = "plugin"
@@ -150,7 +160,7 @@ project_dir_name = ".project-memdir"
 - 선택: `agy` extractor 사용 시 `agy` CLI
 - 선택: 원격 embeddings 사용 시 Cloudflare Workers AI credentials
 
-macOS와 Linux에서 설치된 hook은 `sh`와 번들 launcher를 사용하며, `python3`를 먼저 시도한 뒤 `python`을 시도합니다. Windows에서 설치된 hook은 `SessionStart`와 `UserPromptSubmit`에 `py -3`를 사용합니다. `Stop` hook은 PowerShell로 extraction을 queue에 넣고 현재 턴을 막지 않습니다.
+macOS와 Linux에서 설치된 hook은 `sh`와 번들 launcher를 사용하며, `python3`를 먼저 시도한 뒤 `python`을 시도합니다. 수동 CLI launcher도 같은 POSIX fallback을 사용합니다. Windows에서 설치된 hook은 `SessionStart`와 `UserPromptSubmit`에 `py -3`를 사용하며, 수동 CLI launcher는 `py -3`, `python`, `python3` 순서로 시도합니다. `Stop` hook은 PowerShell로 extraction을 queue에 넣고 현재 턴을 막지 않습니다.
 
 ## 제거
 

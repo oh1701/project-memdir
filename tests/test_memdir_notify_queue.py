@@ -187,9 +187,10 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         enqueue.assert_not_called()
         fake_subprocess.Popen.assert_not_called()
         self.assertIn(
-            "[memdir_extract_stop] skipped: missing [memdir.extractor].provider; set it to codex, agy or local_cli in harness.toml",
+            "[memdir_extract_stop] skipped: missing [memdir.extractor].provider; set it to codex, agy or local_cli in",
             stderr.getvalue(),
         )
+        self.assertIn(".codex/project-memdir/harness.toml", stderr.getvalue())
 
     def test_stop_hook_queues_event_and_starts_detached_drain(self) -> None:
         module = _load_module("memdir_stop_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
@@ -435,6 +436,32 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         drain.assert_called_once_with(max_jobs=2, owner="unit")
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["processed_count"], 2)
+
+    def test_memdir_cli_exposes_init_config_command(self) -> None:
+        module = _load_module("memdir_cli_init_config_under_test", ROOT / "hooks" / "automation" / "memdir_cli.py")
+        stdout = io.StringIO()
+
+        with (
+            mock.patch.object(
+                module,
+                "ensure_user_harness_config",
+                return_value={
+                    "created": True,
+                    "path": "/Users/example/.codex/project-memdir/harness.toml",
+                    "source": "/plugin/harness.toml.example",
+                },
+                create=True,
+            ) as init_config,
+            mock.patch("sys.argv", ["memdir_cli.py", "init-config"]),
+            mock.patch("sys.stdout", stdout),
+        ):
+            exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        init_config.assert_called_once_with()
+        payload = json.loads(stdout.getvalue())
+        self.assertTrue(payload["created"])
+        self.assertEqual(payload["path"], "/Users/example/.codex/project-memdir/harness.toml")
 
 
 if __name__ == "__main__":
