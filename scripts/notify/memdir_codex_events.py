@@ -101,10 +101,14 @@ def _extract_session_state_user_message(payload: dict[str, Any]) -> str:
     prompt = state.get("last_user_prompt")
     if not isinstance(prompt, str) or not prompt.strip():
         return ""
-    payload_session_id = first_present(payload, ("session_id", "session-id", "thread-id", "thread_id"))
     state_session_id = state.get("last_session_id")
-    if isinstance(state_session_id, str) and state_session_id.strip() and payload_session_id:
-        if state_session_id.strip() != memdir_notify._to_text(payload_session_id).strip():
+    if isinstance(state_session_id, str) and state_session_id.strip():
+        payload_session_candidates = [
+            memdir_notify._to_text(payload.get(key)).strip()
+            for key in ("thread-id", "thread_id", "session_id", "session-id")
+        ]
+        payload_session_candidates = [candidate for candidate in payload_session_candidates if candidate]
+        if payload_session_candidates and state_session_id.strip() not in payload_session_candidates:
             return ""
     return prompt.strip()
 

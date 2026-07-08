@@ -400,7 +400,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         payload = {
             "hookEventName": "Stop",
             "cwd": "/tmp/project",
-            "session_id": "session-1",
+            "session_id": "stop-hook-session",
             "turn_id": "turn-1",
             "thread-id": "session-1",
             "transcript_path": "/tmp/not-written-yet.jsonl",
