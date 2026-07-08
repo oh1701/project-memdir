@@ -53,14 +53,14 @@ plugin은 기본 템플릿을 `harness.toml.example`로 제공합니다.
 설치 직후 바로 만들고 싶으면 이 릴리스가 설치된 plugin cache path에서 OS별 명령을 실행합니다.
 
 ```sh
-cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.10
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.11
 sh hooks/automation/memdir_cli.sh init-config
 ```
 
 Windows에서는 PowerShell 기준으로 실행합니다.
 
 ```powershell
-cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.10
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.11
 .\hooks\automation\memdir_cli.cmd init-config
 ```
 

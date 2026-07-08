@@ -172,6 +172,7 @@ def _user_prompt_submit() -> int:
 
 def _stop() -> int:
     try:
+        os.environ.setdefault("PROJECT_MEMDIR_CLIENT", "codex")
         if str(NOTIFY_DIR) not in sys.path:
             sys.path.insert(0, str(NOTIFY_DIR))
         import memdir_stop  # noqa: PLC0415
