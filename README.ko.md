@@ -156,6 +156,8 @@ strategy = "cwd"
 
 프로젝트 메모리 저장 위치는 사용자 `harness.toml`의 `[memdir.storage]`로 선택합니다.
 
+`<project-slug>`는 UTF-8/Unicode 프로젝트 디렉터리명을 NFC 형태로 보존하고, 지원하지 않는 문자는 `-`로 접은 뒤 경로 digest를 붙입니다.
+
 ```toml
 [memdir.storage]
 # plugin: 안정적인 사용자 데이터 디렉터리 아래에 저장합니다:

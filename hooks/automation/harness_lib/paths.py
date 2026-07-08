@@ -6,6 +6,7 @@ import hashlib
 import os
 import pathlib
 import re
+import unicodedata
 
 PROJECT_MARKERS = (
     "AGENTS.md",
@@ -74,7 +75,8 @@ def detect_project_root(raw_cwd: str | os.PathLike[str] | None = None) -> pathli
 
 def project_slug(project_root: pathlib.Path) -> str:
     project_root = canonicalize_existing_path(project_root)
-    base = re.sub(r"[^A-Za-z0-9._-]+", "-", project_root.name or "root").strip("-")
+    project_name = unicodedata.normalize("NFC", project_root.name or "root")
+    base = re.sub(r"[^\w._-]+", "-", project_name, flags=re.UNICODE).strip("-")
     digest = hashlib.sha1(str(project_root).encode("utf-8")).hexdigest()[:8]
     return f"{base or 'root'}-{digest}"
 

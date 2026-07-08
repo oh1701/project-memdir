@@ -156,6 +156,8 @@ strategy = "cwd"
 
 project memories 的存储位置由用户 `harness.toml` 中的 `[memdir.storage]` 选择。
 
+`<project-slug>` 会以 NFC 形式保留 UTF-8/Unicode 项目目录名，将不支持的字符折叠为 `-`，并追加路径 digest。
+
 ```toml
 [memdir.storage]
 # plugin: 存储在稳定的用户数据目录下:

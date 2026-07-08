@@ -20,6 +20,8 @@ strategy = "cwd"
 
 # plugin: stores memories under a stable user data directory:
 #   ${HOME}/.project-memdir/memories/projects/<project-slug>
+#   <project-slug> preserves the UTF-8/Unicode project directory name in NFC form,
+#   folds unsupported characters to "-", and appends a path digest.
 # project: stores memories inside the active project:
 #   <project-root>/.project-memdir
 [memdir.storage]

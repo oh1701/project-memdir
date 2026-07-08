@@ -156,6 +156,8 @@ strategy = "cwd"
 
 Choose where project memories are stored with `[memdir.storage]` in your user `harness.toml`:
 
+`<project-slug>` preserves the UTF-8/Unicode project directory name in NFC form, folds unsupported characters to `-`, and appends a path digest.
+
 ```toml
 [memdir.storage]
 # plugin: stores memories under a stable user data directory:

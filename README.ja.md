@@ -156,6 +156,8 @@ strategy = "cwd"
 
 project memories の保存先は user `harness.toml` の `[memdir.storage]` で選択します。
 
+`<project-slug>` は UTF-8/Unicode の project directory 名を NFC 形式で保持し、対応しない文字を `-` に変換して path digest を付けます。
+
 ```toml
 [memdir.storage]
 # plugin: stable user data directory の下に保存します:
