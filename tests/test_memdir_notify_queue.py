@@ -333,6 +333,179 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         fake_subprocess.Popen.assert_not_called()
         self.assertIn("[memdir_stop] queued=already_queued background_drain=skipped", stderr.getvalue())
 
+    def test_stop_hook_merges_claude_transcript_prompt_when_payload_has_no_user_message(self) -> None:
+        module = _load_module("memdir_stop_claude_transcript_prompt_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())
+        stderr = io.StringIO()
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            transcript_path = pathlib.Path(raw_tmp) / "claude.jsonl"
+            transcript_items = [
+                {
+                    "type": "user",
+                    "message": {"role": "user", "content": "ignored older prompt"},
+                    "promptId": "prompt-old",
+                    "origin": {"kind": "human"},
+                },
+                {
+                    "type": "user",
+                    "message": {"role": "user", "content": [{"type": "tool_result", "content": "tool output"}]},
+                    "promptId": "tool-result",
+                },
+                {
+                    "type": "user",
+                    "message": {"role": "user", "content": "claude transcript prompt"},
+                    "promptId": "prompt-1",
+                    "origin": {"kind": "human"},
+                },
+            ]
+            transcript_path.write_text(
+                "\n".join(json.dumps(item, ensure_ascii=False) for item in transcript_items) + "\n",
+                encoding="utf-8",
+            )
+            payload = {
+                "hookEventName": "Stop",
+                "cwd": "/tmp/project",
+                "session_id": "session-1",
+                "prompt_id": "prompt-1",
+                "thread-id": "thread-1",
+                "transcript_path": str(transcript_path),
+                "last-assistant-message": "ok",
+            }
+
+            with (
+                mock.patch.dict(module.os.environ, {"PROJECT_MEMDIR_CLIENT": "claude"}, clear=False),
+                mock.patch.object(module, "load_settings", return_value={"memdir": {"extractor": {"provider": "codex"}}}, create=True),
+                mock.patch.object(module.memdir_notify, "_append_observation"),
+                mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True),
+                mock.patch.object(
+                    module.memdir_notify,
+                    "enqueue_memdir_extraction_job",
+                    return_value={"queued": False, "reason": "already_queued"},
+                    create=True,
+                ) as enqueue,
+                mock.patch.object(module.memdir_notify, "subprocess", fake_subprocess, create=True),
+                mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+                mock.patch.object(module.sys, "stderr", stderr),
+            ):
+                exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        enqueue.assert_called_once()
+        queued_event = enqueue.call_args.args[0]
+        self.assertEqual(queued_event["source"], "claude-stop-hook")
+        self.assertEqual(queued_event["input-messages"], [{"role": "user", "content": "claude transcript prompt"}])
+        fake_subprocess.Popen.assert_not_called()
+        self.assertIn("[memdir_stop] queued=already_queued background_drain=skipped", stderr.getvalue())
+
+    def test_stop_hook_accepts_claude_transcript_without_prompt_metadata(self) -> None:
+        module = _load_module("memdir_stop_claude_plain_transcript_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            transcript_path = pathlib.Path(raw_tmp) / "claude.jsonl"
+            transcript_path.write_text(
+                json.dumps(
+                    {
+                        "type": "user",
+                        "message": {"role": "user", "content": "내 이름은 오규성이야. 기억해줘."},
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            payload = {
+                "hookEventName": "Stop",
+                "cwd": "/tmp/project",
+                "session_id": "session-1",
+                "thread-id": "thread-1",
+                "transcript_path": str(transcript_path),
+                "last-assistant-message": "ok",
+            }
+
+            with (
+                mock.patch.dict(module.os.environ, {"PROJECT_MEMDIR_CLIENT": "claude"}, clear=False),
+                mock.patch.object(module, "load_settings", return_value={"memdir": {"extractor": {"provider": "codex"}}}, create=True),
+                mock.patch.object(module.memdir_notify, "_append_observation"),
+                mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True),
+                mock.patch.object(
+                    module.memdir_notify,
+                    "enqueue_memdir_extraction_job",
+                    return_value={"queued": False, "reason": "already_queued"},
+                    create=True,
+                ) as enqueue,
+                mock.patch.object(module.memdir_notify, "subprocess", fake_subprocess, create=True),
+                mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+                mock.patch.object(module.sys, "stderr", io.StringIO()),
+            ):
+                exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        enqueue.assert_called_once()
+        queued_event = enqueue.call_args.args[0]
+        self.assertEqual(
+            queued_event["input-messages"],
+            [{"role": "user", "content": "내 이름은 오규성이야. 기억해줘."}],
+        )
+        fake_subprocess.Popen.assert_not_called()
+
+    def test_stop_hook_claude_transcript_fallback_ignores_local_command_messages(self) -> None:
+        module = _load_module("memdir_stop_claude_transcript_fallback_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            transcript_path = pathlib.Path(raw_tmp) / "claude.jsonl"
+            transcript_items = [
+                {
+                    "type": "user",
+                    "message": {"role": "user", "content": "latest real prompt"},
+                    "promptId": "prompt-real",
+                    "origin": {"kind": "human"},
+                },
+                {
+                    "type": "user",
+                    "message": {"role": "user", "content": "<local-command-stdout>Catch you later!</local-command-stdout>"},
+                    "promptId": "prompt-command",
+                },
+            ]
+            transcript_path.write_text(
+                "\n".join(json.dumps(item, ensure_ascii=False) for item in transcript_items) + "\n",
+                encoding="utf-8",
+            )
+            payload = {
+                "hookEventName": "Stop",
+                "cwd": "/tmp/project",
+                "session_id": "session-1",
+                "prompt_id": "missing-prompt",
+                "thread-id": "thread-1",
+                "transcript_path": str(transcript_path),
+                "last-assistant-message": "ok",
+            }
+
+            with (
+                mock.patch.dict(module.os.environ, {"PROJECT_MEMDIR_CLIENT": "claude"}, clear=False),
+                mock.patch.object(module, "load_settings", return_value={"memdir": {"extractor": {"provider": "codex"}}}, create=True),
+                mock.patch.object(module.memdir_notify, "_append_observation"),
+                mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True),
+                mock.patch.object(
+                    module.memdir_notify,
+                    "enqueue_memdir_extraction_job",
+                    return_value={"queued": False, "reason": "already_queued"},
+                    create=True,
+                ) as enqueue,
+                mock.patch.object(module.memdir_notify, "subprocess", fake_subprocess, create=True),
+                mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+                mock.patch.object(module.sys, "stderr", io.StringIO()),
+            ):
+                exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        enqueue.assert_called_once()
+        queued_event = enqueue.call_args.args[0]
+        self.assertEqual(queued_event["input-messages"], [{"role": "user", "content": "latest real prompt"}])
+        fake_subprocess.Popen.assert_not_called()
+
     def test_stop_hook_prefers_payload_user_message_over_transcript_prompt(self) -> None:
         module = _load_module("memdir_stop_payload_prompt_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
 
