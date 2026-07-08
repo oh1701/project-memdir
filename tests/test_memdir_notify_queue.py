@@ -333,6 +333,67 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         fake_subprocess.Popen.assert_not_called()
         self.assertIn("[memdir_stop] queued=already_queued background_drain=skipped", stderr.getvalue())
 
+    def test_stop_hook_codex_transcript_falls_back_when_turn_id_misses(self) -> None:
+        module = _load_module("memdir_stop_codex_transcript_turn_fallback_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            transcript_path = pathlib.Path(raw_tmp) / "rollout.jsonl"
+            transcript_items = [
+                {
+                    "payload": {
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": "older transcript prompt"}],
+                        "internal_chat_message_metadata_passthrough": {"turn_id": "turn-old"},
+                    }
+                },
+                {
+                    "payload": {
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"type": "input_text", "text": "latest transcript prompt"}],
+                        "internal_chat_message_metadata_passthrough": {"turn_id": "turn-latest"},
+                    }
+                },
+            ]
+            transcript_path.write_text(
+                "\n".join(json.dumps(item) for item in transcript_items) + "\n",
+                encoding="utf-8",
+            )
+            payload = {
+                "hookEventName": "Stop",
+                "cwd": "/tmp/project",
+                "session_id": "session-1",
+                "turn_id": "turn-from-stop-payload",
+                "thread-id": "thread-1",
+                "transcript_path": str(transcript_path),
+                "last-assistant-message": "ok",
+                "client": "codex",
+            }
+
+            with (
+                mock.patch.object(module, "load_settings", return_value={"memdir": {"extractor": {"provider": "codex"}}}, create=True),
+                mock.patch.object(module.memdir_notify, "_append_observation"),
+                mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True),
+                mock.patch.object(
+                    module.memdir_notify,
+                    "enqueue_memdir_extraction_job",
+                    return_value={"queued": False, "reason": "already_queued"},
+                    create=True,
+                ) as enqueue,
+                mock.patch.object(module.memdir_notify, "subprocess", fake_subprocess, create=True),
+                mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+                mock.patch.object(module.sys, "stderr", io.StringIO()),
+            ):
+                exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        enqueue.assert_called_once()
+        queued_event = enqueue.call_args.args[0]
+        self.assertEqual(queued_event["input-messages"], [{"role": "user", "content": "latest transcript prompt"}])
+        fake_subprocess.Popen.assert_not_called()
+
     def test_stop_hook_merges_claude_transcript_prompt_when_payload_has_no_user_message(self) -> None:
         module = _load_module("memdir_stop_claude_transcript_prompt_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
         fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())
@@ -552,8 +613,9 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         queued_event = enqueue.call_args.args[0]
         self.assertEqual(queued_event["input-messages"], payload["input-messages"])
 
-    def test_stop_hook_requires_matching_transcript_turn_id(self) -> None:
+    def test_stop_hook_falls_back_to_latest_transcript_user_when_turn_id_misses(self) -> None:
         module = _load_module("memdir_stop_transcript_turn_mismatch_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())
 
         with tempfile.TemporaryDirectory() as raw_tmp:
             transcript_path = pathlib.Path(raw_tmp) / "rollout.jsonl"
@@ -581,17 +643,25 @@ class MemdirNotifyQueueTests(unittest.TestCase):
             with (
                 mock.patch.object(module, "load_settings", return_value={"memdir": {"extractor": {"provider": "codex"}}}, create=True),
                 mock.patch.object(module.memdir_notify, "_append_observation"),
-                mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True) as enabled,
-                mock.patch.object(module.memdir_notify, "enqueue_memdir_extraction_job", create=True) as enqueue,
+                mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True),
+                mock.patch.object(
+                    module.memdir_notify,
+                    "enqueue_memdir_extraction_job",
+                    return_value={"queued": False, "reason": "already_queued"},
+                    create=True,
+                ) as enqueue,
+                mock.patch.object(module.memdir_notify, "subprocess", fake_subprocess, create=True),
                 mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
                 mock.patch.object(module.sys, "stderr", stderr),
             ):
                 exit_code = module.main()
 
         self.assertEqual(exit_code, 0)
-        enabled.assert_not_called()
-        enqueue.assert_not_called()
-        self.assertIn("[memdir_stop] skipped: missing user message", stderr.getvalue())
+        enqueue.assert_called_once()
+        queued_event = enqueue.call_args.args[0]
+        self.assertEqual(queued_event["input-messages"], [{"role": "user", "content": "wrong turn prompt"}])
+        fake_subprocess.Popen.assert_not_called()
+        self.assertIn("[memdir_stop] queued=already_queued background_drain=skipped", stderr.getvalue())
 
     def test_stop_hook_keeps_missing_user_message_skip_when_transcript_prompt_is_absent(self) -> None:
         module = _load_module("memdir_stop_no_transcript_prompt_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")

@@ -84,7 +84,7 @@ def _extract_transcript_user_message(payload: dict[str, Any]) -> str:
                     matched_user = user_text
     except OSError:
         return ""
-    if target_turn_id:
+    if target_turn_id and matched_user:
         return matched_user
     return latest_user
 
