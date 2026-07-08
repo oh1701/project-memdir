@@ -13,7 +13,7 @@ This repository is the `project-memdir` plugin source. It ships Codex hook suppo
 
 - Project hooks are declared in `.claude/settings.json`.
 - Visible project hook wrappers live in `.claude/hooks/`.
-- Claude Code plugin hook declarations live in `hooks/hooks.json` and are referenced by `.claude-plugin/plugin.json`.
+- Claude Code plugin hook declarations live in `hooks/hooks.json`; Claude Code loads this standard file automatically.
 - Both project and plugin hook paths delegate to `hooks/claude/`, which reuses the shared `hooks/automation/memdir_hook.sh` dispatcher.
 
 ## Validation
