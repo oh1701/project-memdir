@@ -1,4 +1,13 @@
 {
+  "extraKnownMarketplaces": {
+    "project-memdir-local": {
+      "source": {
+        "source": "github",
+        "repo": "oh1701/project-memdir"
+      },
+      "autoUpdate": true
+    }
+  },
   "hooks": {
     "SessionStart": [
       {
