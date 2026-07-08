@@ -36,6 +36,14 @@ def _plugin_windows_dispatch_command(action: str) -> str:
     return f"py -3 {script} {action}"
 
 
+def _claude_plugin_dispatch_command(action: str) -> str:
+    return "node"
+
+
+def _claude_project_dispatch_command(action: str) -> str:
+    return "node"
+
+
 def _settings(base_dir: pathlib.Path) -> dict[str, object]:
     settings = dict(memdir.memdir_settings())
     settings.update(
@@ -336,6 +344,55 @@ class MemdirHookTests(unittest.TestCase):
                     )
                     self.assertRegex(command["commandWindows"], r"^py -3\b")
                     self.assertIn("memdir_hook.py", command["commandWindows"])
+
+    def test_claude_plugin_hooks_use_cross_platform_node_dispatcher(self) -> None:
+        hook = json.loads((ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+        cases = [
+            ("SessionStart", "session-start"),
+            ("UserPromptSubmit", "user-prompt-submit"),
+            ("Stop", "stop"),
+        ]
+
+        for event_name, action in cases:
+            with self.subTest(event_name=event_name):
+                command = hook["hooks"][event_name][0]["hooks"][0]
+
+                self.assertEqual(command["type"], "command")
+                self.assertEqual(command["command"], _claude_plugin_dispatch_command(action))
+                self.assertEqual(command["args"], [f"${{CLAUDE_PLUGIN_ROOT}}/hooks/claude/memdir-hook.mjs", action])
+                self.assertNotIn("commandWindows", command)
+                self.assertNotIn(" sh ", f" {command['command']} ")
+                self.assertIn("memdir-hook.mjs", command["args"][0])
+
+    def test_claude_project_settings_use_cross_platform_node_dispatcher(self) -> None:
+        settings = json.loads((ROOT / ".claude" / "settings.json").read_text(encoding="utf-8"))
+        cases = [
+            ("SessionStart", "session-start"),
+            ("UserPromptSubmit", "user-prompt-submit"),
+            ("Stop", "stop"),
+        ]
+
+        for event_name, action in cases:
+            with self.subTest(event_name=event_name):
+                command = settings["hooks"][event_name][0]["hooks"][0]
+
+                self.assertEqual(command["type"], "command")
+                self.assertEqual(command["command"], _claude_project_dispatch_command(action))
+                self.assertEqual(command["args"], [f"${{CLAUDE_PROJECT_DIR}}/hooks/claude/memdir-hook.mjs", action])
+                self.assertNotIn("commandWindows", command)
+                self.assertNotIn(".claude/hooks", command["command"])
+
+    def test_claude_node_dispatcher_supports_windows_without_shell_wrapper(self) -> None:
+        launcher = (ROOT / "hooks" / "claude" / "memdir-hook.mjs").read_text(encoding="utf-8")
+
+        self.assertIn('process.platform === "win32"', launcher)
+        self.assertIn('["py", ["-3", hookScript, action]]', launcher)
+        self.assertIn('["python", [hookScript, action]]', launcher)
+        self.assertIn('["python3", [hookScript, action]]', launcher)
+        self.assertIn("windowsHide: true", launcher)
+        self.assertIn('PROJECT_MEMDIR_CLIENT: "claude"', launcher)
+        self.assertIn('{"continue":true,"suppressOutput":true}', launcher)
+        self.assertNotIn("memdir_hook.sh", launcher)
 
     def test_stop_windows_launcher_does_not_hide_parent_terminal(self) -> None:
         stop_hook = json.loads((ROOT / "hooks" / "plugin" / "stop.json").read_text(encoding="utf-8"))

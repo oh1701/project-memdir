@@ -1,6 +1,6 @@
 {
   "name": "project-memdir",
-  "version": "1.0.11",
+  "version": "1.0.6",
   "description": "Project-local memory injection and extraction helpers for Codex.",
   "author": {
     "name": "project-memdir maintainers"

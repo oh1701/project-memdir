@@ -7,7 +7,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/claude/session-start.sh\"",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/claude/memdir-hook.mjs",
+              "session-start"
+            ],
             "timeout": 30
           }
         ]
@@ -18,7 +22,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/claude/user-prompt-submit.sh\"",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/claude/memdir-hook.mjs",
+              "user-prompt-submit"
+            ],
             "timeout": 20
           }
         ]
@@ -29,7 +37,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/claude/stop.sh\"",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/claude/memdir-hook.mjs",
+              "stop"
+            ],
             "timeout": 15
           }
         ]
