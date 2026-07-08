@@ -35,7 +35,7 @@ push 전 로컬 checkout으로 테스트하려면 local path를 추가합니다.
 /reload-plugins
 ```
 
-Claude Code가 plugin hook 신뢰 또는 승인을 요청하면 이 plugin의 hook을 승인하세요. 그래야 SessionStart, UserPromptSubmit, Stop hook이 실행됩니다. Claude Code plugin도 아래에서 설명하는 동일한 `~/.codex/project-memdir/harness.toml` 설정을 사용합니다.
+Claude Code가 plugin hook 신뢰 또는 승인을 요청하면 이 plugin의 hook을 승인하세요. 그래야 SessionStart, UserPromptSubmit, Stop hook이 실행됩니다. Claude Code plugin도 아래에서 설명하는 동일한 `~/.project-memdir/harness.toml` 설정을 사용합니다.
 
 ## 설정
 
@@ -43,10 +43,10 @@ plugin은 기본 템플릿을 `harness.toml.example`로 제공합니다.
 사용자가 수정하는 설정 파일은 버전별 plugin cache 밖에 저장됩니다.
 
 ```text
-~/.codex/project-memdir/harness.toml
+~/.project-memdir/harness.toml
 ```
 
-> **중요:** 자동 메모리 추출을 사용하려면 `~/.codex/project-memdir/harness.toml`에 `[memdir.extractor].provider`를 반드시 설정해야 합니다.
+> **중요:** 자동 메모리 추출을 사용하려면 `~/.project-memdir/harness.toml`에 `[memdir.extractor].provider`를 반드시 설정해야 합니다.
 > 이 provider를 설정하지 않으면 메모리 recall은 동작하지만 Stop hook은 턴 종료 추출 준비를 실패로 처리합니다.
 
 이 파일이 없으면 다음 `SessionStart` hook이 `harness.toml.example`에서 자동 생성합니다.
@@ -155,7 +155,7 @@ strategy = "cwd"
 ```toml
 [memdir.storage]
 # plugin: 안정적인 사용자 데이터 디렉터리 아래에 저장합니다:
-#   ${HOME}/.codex/project-memdir/memories/projects/<project-slug>
+#   ${HOME}/.project-memdir/memories/projects/<project-slug>
 # project: 현재 프로젝트 내부에 저장합니다:
 #   <project-root>/.project-memdir
 mode = "plugin"
@@ -196,11 +196,11 @@ codex plugin marketplace remove project-memdir-local
 macOS와 Linux:
 
 ```sh
-rm -rf ~/.codex/project-memdir
+rm -rf ~/.project-memdir
 ```
 
 Windows PowerShell:
 
 ```powershell
-Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\project-memdir" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.project-memdir" -ErrorAction SilentlyContinue
 ```

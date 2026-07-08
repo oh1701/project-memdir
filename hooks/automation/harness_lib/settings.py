@@ -8,24 +8,21 @@ import pathlib
 import tomllib
 from typing import Any
 
+from .utils import project_memdir_file_lock, project_memdir_home, project_memdir_lock_path
+
 
 CODEX_ROOT = pathlib.Path(__file__).resolve().parents[3]
 BUNDLED_HARNESS_TEMPLATE_PATH = CODEX_ROOT / "harness.toml.example"
 
 
-def _default_codex_home() -> pathlib.Path:
-    raw_home = os.environ.get("CODEX_HOME")
-    if raw_home:
-        return pathlib.Path(os.path.expandvars(raw_home)).expanduser()
-    return pathlib.Path.home() / ".codex"
-
-
-HARNESS_CONFIG_PATH = _default_codex_home() / "project-memdir" / "harness.toml"
+PROJECT_MEMDIR_HOME = project_memdir_home()
+HARNESS_CONFIG_PATH = PROJECT_MEMDIR_HOME / "harness.toml"
+HARNESS_LOCK_PATH = project_memdir_lock_path()
 
 DEFAULTS: dict[str, Any] = {
     "memdir": {
         "enabled": True,
-        "base_dir": str(pathlib.Path.home() / ".codex" / "project-memdir" / "memories" / "projects"),
+        "base_dir": str(PROJECT_MEMDIR_HOME / "memories" / "projects"),
         "disabled_project_roots": [],
         "graph_db_name": "{project_slug}.sqlite3",
         "max_entrypoint_lines": 200,
@@ -79,6 +76,7 @@ def _expand_value(value: Any, key_path: tuple[str, ...] = ()) -> Any:
         **os.environ,
         "CODEX_ROOT": str(CODEX_ROOT),
         "HOME": str(pathlib.Path.home()),
+        "PROJECT_MEMDIR_HOME": str(PROJECT_MEMDIR_HOME),
     }
     if isinstance(value, str):
         expanded = os.path.expandvars(value.replace("${CODEX_ROOT}", env["CODEX_ROOT"]).replace("${HOME}", env["HOME"]))
@@ -177,29 +175,32 @@ def _merge_toml_file(payload: dict[str, Any], config_path: pathlib.Path) -> dict
 
 
 def ensure_user_harness_config() -> dict[str, Any]:
-    result = {
-        "created": False,
-        "path": str(HARNESS_CONFIG_PATH),
-        "source": str(BUNDLED_HARNESS_TEMPLATE_PATH),
-    }
-    if HARNESS_CONFIG_PATH.exists():
-        result["reason"] = "exists"
-        return result
-    if not BUNDLED_HARNESS_TEMPLATE_PATH.exists():
-        result["reason"] = "missing_template"
-        return result
+    with project_memdir_file_lock():
+        result = {
+            "created": False,
+            "path": str(HARNESS_CONFIG_PATH),
+            "source": str(BUNDLED_HARNESS_TEMPLATE_PATH),
+            "lock_path": str(HARNESS_LOCK_PATH),
+        }
+        if HARNESS_CONFIG_PATH.exists():
+            result["reason"] = "exists"
+            return result
 
-    HARNESS_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    template_bytes = BUNDLED_HARNESS_TEMPLATE_PATH.read_bytes()
-    try:
-        with HARNESS_CONFIG_PATH.open("xb") as handle:
-            handle.write(template_bytes)
-    except FileExistsError:
-        result["reason"] = "exists"
-        return result
+        if not BUNDLED_HARNESS_TEMPLATE_PATH.exists():
+            result["reason"] = "missing_template"
+            return result
 
-    result["created"] = True
-    return result
+        HARNESS_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        template_bytes = BUNDLED_HARNESS_TEMPLATE_PATH.read_bytes()
+        try:
+            with HARNESS_CONFIG_PATH.open("xb") as handle:
+                handle.write(template_bytes)
+        except FileExistsError:
+            result["reason"] = "exists"
+            return result
+
+        result["created"] = True
+        return result
 
 
 def load_settings() -> dict[str, Any]:

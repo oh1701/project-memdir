@@ -24,7 +24,7 @@ class HarnessSettingsTests(unittest.TestCase):
         memdir = payload["memdir"]
 
         self.assertEqual(sorted(key for key, value in memdir.items() if isinstance(value, dict)), ["embedding", "extractor", "project_root", "storage", "vector"])
-        self.assertEqual(memdir["base_dir"], "${HOME}/.codex/project-memdir/memories/projects")
+        self.assertEqual(memdir["base_dir"], "${HOME}/.project-memdir/memories/projects")
         self.assertEqual(memdir["project_root"]["strategy"], "cwd")
         self.assertEqual(memdir["storage"]["mode"], "plugin")
         self.assertEqual(memdir["storage"]["project_dir_name"], ".project-memdir")
@@ -108,6 +108,8 @@ class HarnessSettingsTests(unittest.TestCase):
             with (
                 mock.patch.object(harness_settings, "BUNDLED_HARNESS_TEMPLATE_PATH", bundled_path),
                 mock.patch.object(harness_settings, "HARNESS_CONFIG_PATH", user_path),
+                mock.patch.object(harness_settings, "HARNESS_LOCK_PATH", tmp / ".lock"),
+                mock.patch("harness_lib.utils.project_memdir_lock_path", return_value=tmp / ".lock"),
             ):
                 created = harness_settings.ensure_user_harness_config()
                 user_path.write_text("[memdir]\nenabled = false\n", encoding="utf-8")
@@ -117,6 +119,7 @@ class HarnessSettingsTests(unittest.TestCase):
         self.assertTrue(created["created"])
         self.assertEqual(created["path"], str(user_path))
         self.assertEqual(created["source"], str(bundled_path))
+        self.assertEqual(created["lock_path"], str(tmp / ".lock"))
         self.assertFalse(existing["created"])
         self.assertEqual(user_config_text, "[memdir]\nenabled = false\n")
 
@@ -130,7 +133,7 @@ class HarnessSettingsTests(unittest.TestCase):
         self.assertEqual(loaded["memdir"]["extractor"]["codex_sandbox"], "danger-full-access")
         self.assertEqual(
             pathlib.Path(loaded["memdir"]["base_dir"]),
-            pathlib.Path.home() / ".codex" / "project-memdir" / "memories" / "projects",
+            pathlib.Path.home() / ".project-memdir" / "memories" / "projects",
         )
         self.assertEqual(loaded["memdir"]["project_root"]["strategy"], "cwd")
         self.assertEqual(loaded["memdir"]["storage"]["mode"], "plugin")

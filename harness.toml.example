@@ -1,6 +1,6 @@
 [memdir]
 enabled = true
-base_dir = "${HOME}/.codex/project-memdir/memories/projects"
+base_dir = "${HOME}/.project-memdir/memories/projects"
 manifest_name = "manifest.json"
 topics_dir_name = "topics"
 max_entrypoint_lines = 200
@@ -19,7 +19,7 @@ min_relevant_score = 6
 strategy = "cwd"
 
 # plugin: stores memories under a stable user data directory:
-#   ${HOME}/.codex/project-memdir/memories/projects/<project-slug>
+#   ${HOME}/.project-memdir/memories/projects/<project-slug>
 # project: stores memories inside the active project:
 #   <project-root>/.project-memdir
 [memdir.storage]

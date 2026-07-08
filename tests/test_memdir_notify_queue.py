@@ -190,7 +190,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
             "[memdir_extract_stop] failed: missing [memdir.extractor].provider; set it to codex, agy or local_cli in",
             stderr.getvalue(),
         )
-        self.assertIn(".codex/project-memdir/harness.toml", stderr.getvalue())
+        self.assertIn(".project-memdir/harness.toml", stderr.getvalue())
 
     def test_stop_hook_fails_with_unsupported_extractor_provider(self) -> None:
         module = _load_module("memdir_stop_unsupported_provider_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
@@ -222,7 +222,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
             "[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: bogus; set it to codex, agy or local_cli in",
             stderr.getvalue(),
         )
-        self.assertIn(".codex/project-memdir/harness.toml", stderr.getvalue())
+        self.assertIn(".project-memdir/harness.toml", stderr.getvalue())
 
     def test_stop_hook_queues_event_and_starts_detached_drain(self) -> None:
         module = _load_module("memdir_stop_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
@@ -479,7 +479,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
                 "ensure_user_harness_config",
                 return_value={
                     "created": True,
-                    "path": "/Users/example/.codex/project-memdir/harness.toml",
+                    "path": "/Users/example/.project-memdir/harness.toml",
                     "source": "/plugin/harness.toml.example",
                 },
                 create=True,
@@ -493,7 +493,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         init_config.assert_called_once_with()
         payload = json.loads(stdout.getvalue())
         self.assertTrue(payload["created"])
-        self.assertEqual(payload["path"], "/Users/example/.codex/project-memdir/harness.toml")
+        self.assertEqual(payload["path"], "/Users/example/.project-memdir/harness.toml")
 
 
 if __name__ == "__main__":

@@ -35,7 +35,7 @@ codex plugin add project-memdir@project-memdir-local
 /reload-plugins
 ```
 
-如果 Claude Code 要求 trust 或 approve plugin hooks，请批准此 plugin 的 hooks。这样 SessionStart、UserPromptSubmit 和 Stop hooks 才能运行。Claude Code plugin 也使用下文说明的同一个 `~/.codex/project-memdir/harness.toml` 配置。
+如果 Claude Code 要求 trust 或 approve plugin hooks，请批准此 plugin 的 hooks。这样 SessionStart、UserPromptSubmit 和 Stop hooks 才能运行。Claude Code plugin 也使用下文说明的同一个 `~/.project-memdir/harness.toml` 配置。
 
 ## 配置
 
@@ -43,10 +43,10 @@ plugin 随附的默认模板是 `harness.toml.example`。
 用户可编辑的配置文件存储在版本化 plugin cache 之外。
 
 ```text
-~/.codex/project-memdir/harness.toml
+~/.project-memdir/harness.toml
 ```
 
-> **重要:** 如需使用 automatic memory extraction，必须在 `~/.codex/project-memdir/harness.toml` 中设置 `[memdir.extractor].provider`。
+> **重要:** 如需使用 automatic memory extraction，必须在 `~/.project-memdir/harness.toml` 中设置 `[memdir.extractor].provider`。
 > 如果没有设置该 provider，memory recall 仍会工作，但 Stop hook 会把 turn 结束 extraction setup 视为失败。
 
 如果这个文件不存在，下一个 `SessionStart` hook 会从 `harness.toml.example` 自动创建它。
@@ -155,7 +155,7 @@ project memories 的存储位置由用户 `harness.toml` 中的 `[memdir.storage
 ```toml
 [memdir.storage]
 # plugin: 存储在稳定的用户数据目录下:
-#   ${HOME}/.codex/project-memdir/memories/projects/<project-slug>
+#   ${HOME}/.project-memdir/memories/projects/<project-slug>
 # project: 存储在当前项目内部:
 #   <project-root>/.project-memdir
 mode = "plugin"
@@ -196,11 +196,11 @@ codex plugin marketplace remove project-memdir-local
 macOS 和 Linux:
 
 ```sh
-rm -rf ~/.codex/project-memdir
+rm -rf ~/.project-memdir
 ```
 
 Windows PowerShell:
 
 ```powershell
-Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\project-memdir" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.project-memdir" -ErrorAction SilentlyContinue
 ```

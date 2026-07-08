@@ -181,7 +181,7 @@ class MemdirHookTests(unittest.TestCase):
                 "harness_lib.settings.ensure_user_harness_config",
                 return_value={
                     "created": True,
-                    "path": "/Users/example/.codex/project-memdir/harness.toml",
+                    "path": "/Users/example/.project-memdir/harness.toml",
                     "source": "/plugin/harness.toml.example",
                 },
             ) as ensure_config,
@@ -204,7 +204,7 @@ class MemdirHookTests(unittest.TestCase):
         ensure_config.assert_called_once_with()
         emitted = json.loads(stdout.getvalue())
         self.assertEqual(emitted["hookSpecificOutput"]["additionalContext"], "Session context")
-        self.assertIn("[memdir_session_start] created user config: /Users/example/.codex/project-memdir/harness.toml", stderr.getvalue())
+        self.assertIn("[memdir_session_start] created user config: /Users/example/.project-memdir/harness.toml", stderr.getvalue())
 
     def test_user_prompt_submit_preserves_context_output(self) -> None:
         module = _load_hook_module()

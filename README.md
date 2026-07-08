@@ -35,7 +35,7 @@ For local testing before pushing, add the local checkout instead:
 /reload-plugins
 ```
 
-Claude Code may ask you to trust or approve the plugin hooks. Approve them for this plugin so SessionStart, UserPromptSubmit, and Stop hooks can run. The Claude Code plugin uses the same `~/.codex/project-memdir/harness.toml` configuration described below.
+Claude Code may ask you to trust or approve the plugin hooks. Approve them for this plugin so SessionStart, UserPromptSubmit, and Stop hooks can run. The Claude Code plugin uses the same `~/.project-memdir/harness.toml` configuration described below.
 
 ## Configuration
 
@@ -43,10 +43,10 @@ The plugin ships its default template as `harness.toml.example`.
 Your editable configuration is stored outside the versioned plugin cache:
 
 ```text
-~/.codex/project-memdir/harness.toml
+~/.project-memdir/harness.toml
 ```
 
-> **Important:** Automatic memory extraction requires `[memdir.extractor].provider` in `~/.codex/project-memdir/harness.toml`.
+> **Important:** Automatic memory extraction requires `[memdir.extractor].provider` in `~/.project-memdir/harness.toml`.
 > If you do not set this provider, memory recall still works but the Stop hook fails turn-end extraction setup.
 
 If this file does not exist, the next `SessionStart` hook creates it from `harness.toml.example`.
@@ -155,7 +155,7 @@ Choose where project memories are stored with `[memdir.storage]` in your user `h
 ```toml
 [memdir.storage]
 # plugin: stores memories under a stable user data directory:
-#   ${HOME}/.codex/project-memdir/memories/projects/<project-slug>
+#   ${HOME}/.project-memdir/memories/projects/<project-slug>
 # project: stores memories inside the active project:
 #   <project-root>/.project-memdir
 mode = "plugin"
@@ -196,11 +196,11 @@ To remove the user config and stored memories too, delete the stable user data d
 On macOS and Linux:
 
 ```sh
-rm -rf ~/.codex/project-memdir
+rm -rf ~/.project-memdir
 ```
 
 On Windows PowerShell:
 
 ```powershell
-Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\project-memdir" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.project-memdir" -ErrorAction SilentlyContinue
 ```

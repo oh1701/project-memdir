@@ -20,7 +20,7 @@ from typing import Any
 from .codex_exec import run_codex_exec
 from .paths import canonicalize_existing_path, detect_project_root, project_slug
 from .settings import CODEX_ROOT, HARNESS_CONFIG_PATH, load_settings
-from .utils import atomic_write_json, ensure_dir, utc_now_iso
+from .utils import atomic_write_json, ensure_dir, project_memdir_file_lock, utc_now_iso
 
 
 MANIFEST_NAME = "manifest.json"
@@ -1293,6 +1293,11 @@ def _vector_index_diagnostics(vector_db: pathlib.Path, topics: list[dict[str, An
 
 
 def sync_vector_index(raw_cwd: str | None = None, items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    with project_memdir_file_lock():
+        return _sync_vector_index_locked(raw_cwd, items)
+
+
+def _sync_vector_index_locked(raw_cwd: str | None = None, items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if not is_memdir_enabled(raw_cwd):
         return {"synced": False, "reason": "disabled"}
     paths = resolve_project_paths(raw_cwd)
@@ -1506,6 +1511,11 @@ def _rebuild_manifest(project_root: pathlib.Path, manifest_path: pathlib.Path, i
 
 
 def _ensure_project_memdir_with_items(raw_cwd: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    with project_memdir_file_lock():
+        return _ensure_project_memdir_with_items_locked(raw_cwd)
+
+
+def _ensure_project_memdir_with_items_locked(raw_cwd: str | None = None) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     paths = resolve_project_paths(raw_cwd)
     project_root = paths["project_root"]
     memdir = paths["memdir"]
@@ -2116,6 +2126,22 @@ def extract_memories_from_event(
     if not user_text.strip() or not assistant_text.strip():
         return {"updated": False, "reason": "missing_text"}
 
+    with project_memdir_file_lock():
+        return _extract_memories_from_event_locked(
+            raw_cwd=raw_cwd,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            thread_id=thread_id,
+        )
+
+
+def _extract_memories_from_event_locked(
+    *,
+    raw_cwd: str,
+    user_text: str,
+    assistant_text: str,
+    thread_id: str,
+) -> dict[str, Any]:
     ensured = ensure_project_memdir(raw_cwd)
     project_root = pathlib.Path(ensured["project_root"])
     memdir = pathlib.Path(ensured["memdir"])
