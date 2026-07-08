@@ -9,6 +9,7 @@ from typing import Any
 
 import memdir_notify
 from memdir_event_common import first_present, normalize_stop_payload_base, payload_turn_id
+from harness_lib.memdir import get_memdir_session_state
 
 
 def _extract_input_messages(payload: dict[str, Any]) -> list[Any]:
@@ -89,6 +90,25 @@ def _extract_transcript_user_message(payload: dict[str, Any]) -> str:
     return latest_user
 
 
+def _extract_session_state_user_message(payload: dict[str, Any]) -> str:
+    cwd = first_present(payload, ("cwd", "working_directory", "workdir"))
+    if not isinstance(cwd, str) or not cwd.strip():
+        return ""
+    try:
+        state = get_memdir_session_state(cwd)
+    except Exception:
+        return ""
+    prompt = state.get("last_user_prompt")
+    if not isinstance(prompt, str) or not prompt.strip():
+        return ""
+    payload_session_id = first_present(payload, ("session_id", "session-id", "thread-id", "thread_id"))
+    state_session_id = state.get("last_session_id")
+    if isinstance(state_session_id, str) and state_session_id.strip() and payload_session_id:
+        if state_session_id.strip() != memdir_notify._to_text(payload_session_id).strip():
+            return ""
+    return prompt.strip()
+
+
 def normalize_stop_payload(payload: dict[str, Any]) -> dict[str, Any]:
     event = normalize_stop_payload_base(payload, source="codex-stop-hook")
     if not isinstance(event.get("input-messages"), list):
@@ -97,6 +117,10 @@ def normalize_stop_payload(payload: dict[str, Any]) -> dict[str, Any]:
         return event
 
     prompt = _extract_transcript_user_message(payload)
+    if prompt:
+        event["input-messages"] = [{"role": "user", "content": prompt}]
+        return event
+    prompt = _extract_session_state_user_message(payload)
     if prompt:
         event["input-messages"] = [{"role": "user", "content": prompt}]
     return event

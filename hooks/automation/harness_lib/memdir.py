@@ -286,13 +286,23 @@ def _load_session_state(state_path: pathlib.Path) -> dict[str, Any]:
         count = max(int(count), 0)
     except (TypeError, ValueError):
         count = 0
-    return {"count": count}
+    state: dict[str, Any] = {"count": count}
+    for key in ("last_user_prompt", "last_turn_id", "last_session_id", "updated_at"):
+        value = loaded.get(key)
+        if isinstance(value, str) and value.strip():
+            state[key] = value
+    return state
 
 
 def _save_session_state(state_path: pathlib.Path, state: dict[str, Any]) -> None:
     state_path.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = {"count": int(state.get("count", 0))}
+    for key in ("last_user_prompt", "last_turn_id", "last_session_id", "updated_at"):
+        value = state.get(key)
+        if isinstance(value, str) and value.strip():
+            payload[key] = value
     state_path.write_text(
-        json.dumps({"count": int(state.get("count", 0))}),
+        json.dumps(payload, ensure_ascii=False),
         encoding="utf-8",
     )
 
@@ -313,6 +323,26 @@ def advance_memdir_session_turn(raw_cwd: str | None = None) -> dict[str, Any]:
     state_path = get_user_prompt_submit_state_path(raw_cwd)
     state = _load_session_state(state_path)
     state["count"] += 1
+    _save_session_state(state_path, state)
+    return {"state_path": str(state_path), **state}
+
+
+def record_user_prompt_submit(
+    raw_cwd: str | None = None,
+    *,
+    user_prompt: str,
+    turn_id: str | None = None,
+    session_id: str | None = None,
+) -> dict[str, Any]:
+    state_path = get_user_prompt_submit_state_path(raw_cwd)
+    state = _load_session_state(state_path)
+    state["count"] = int(state.get("count", 0)) + 1
+    state["last_user_prompt"] = user_prompt
+    if turn_id:
+        state["last_turn_id"] = turn_id
+    if session_id:
+        state["last_session_id"] = session_id
+    state["updated_at"] = utc_now_iso()
     _save_session_state(state_path, state)
     return {"state_path": str(state_path), **state}
 

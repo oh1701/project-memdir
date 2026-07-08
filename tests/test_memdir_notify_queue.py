@@ -394,6 +394,43 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         self.assertEqual(queued_event["input-messages"], [{"role": "user", "content": "latest transcript prompt"}])
         fake_subprocess.Popen.assert_not_called()
 
+    def test_stop_hook_codex_uses_user_prompt_submit_state_when_transcript_is_not_ready(self) -> None:
+        module = _load_module("memdir_stop_codex_session_state_fallback_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())
+        payload = {
+            "hookEventName": "Stop",
+            "cwd": "/tmp/project",
+            "session_id": "session-1",
+            "turn_id": "turn-1",
+            "thread-id": "session-1",
+            "transcript_path": "/tmp/not-written-yet.jsonl",
+            "last-assistant-message": "ok",
+            "client": "codex",
+        }
+
+        with (
+            mock.patch.object(module, "load_settings", return_value={"memdir": {"extractor": {"provider": "codex"}}}, create=True),
+            mock.patch.object(module.memdir_notify, "_append_observation"),
+            mock.patch.object(module.memdir_notify, "is_memdir_enabled", return_value=True, create=True),
+            mock.patch.object(
+                module.memdir_notify,
+                "enqueue_memdir_extraction_job",
+                return_value={"queued": False, "reason": "already_queued"},
+                create=True,
+            ) as enqueue,
+            mock.patch.object(module.memdir_codex_events, "get_memdir_session_state", return_value={"last_user_prompt": "state prompt", "last_session_id": "session-1"}),
+            mock.patch.object(module.memdir_notify, "subprocess", fake_subprocess, create=True),
+            mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+            mock.patch.object(module.sys, "stderr", io.StringIO()),
+        ):
+            exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        enqueue.assert_called_once()
+        queued_event = enqueue.call_args.args[0]
+        self.assertEqual(queued_event["input-messages"], [{"role": "user", "content": "state prompt"}])
+        fake_subprocess.Popen.assert_not_called()
+
     def test_stop_hook_merges_claude_transcript_prompt_when_payload_has_no_user_message(self) -> None:
         module = _load_module("memdir_stop_claude_transcript_prompt_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
         fake_subprocess = types.SimpleNamespace(DEVNULL=object(), Popen=mock.Mock())

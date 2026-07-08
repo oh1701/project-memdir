@@ -131,11 +131,17 @@ def _user_prompt_submit() -> int:
         return 0
 
     try:
-        from harness_lib.memdir import build_memdir_context, is_memdir_enabled  # noqa: PLC0415
+        from harness_lib.memdir import build_memdir_context, is_memdir_enabled, record_user_prompt_submit  # noqa: PLC0415
 
         if not is_memdir_enabled(cwd):
             _emit(_continue_payload())
             return 0
+        record_user_prompt_submit(
+            cwd,
+            user_prompt=user_prompt,
+            turn_id=str(payload.get("turn_id") or ""),
+            session_id=str(payload.get("session_id") or ""),
+        )
     except Exception as exc:  # noqa: BLE001
         _emit_skip(f"user-prompt-submit unavailable: {type(exc).__name__}: {exc}")
         return 0

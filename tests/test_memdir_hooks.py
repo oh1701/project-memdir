@@ -224,6 +224,7 @@ class MemdirHookTests(unittest.TestCase):
 
             with (
                 mock.patch.object(memdir, "is_memdir_enabled", return_value=True),
+                mock.patch.object(memdir, "record_user_prompt_submit") as record_prompt,
                 mock.patch.object(memdir, "build_memdir_context", return_value={"system_message": "Memory context"}) as build,
                 mock.patch.object(sys, "stdin", io.StringIO(json.dumps(payload))),
                 contextlib.redirect_stdout(stdout),
@@ -238,6 +239,7 @@ class MemdirHookTests(unittest.TestCase):
             {"hookEventName": "UserPromptSubmit", "additionalContext": "Memory context"},
         )
         self.assertTrue(emitted["suppressOutput"])
+        record_prompt.assert_called_once_with(str(project), user_prompt="remember this", turn_id="turn-1", session_id="session-1")
         build.assert_called_once_with("remember this", str(project), include_core_paths=False)
         self.assertEqual(stderr.getvalue(), "")
 
