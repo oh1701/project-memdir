@@ -1777,6 +1777,7 @@ def memdir_doctor(raw_cwd: str | None = None) -> dict[str, Any]:
     enabled = is_memdir_enabled(raw_cwd)
     entrypoint_path = paths["entrypoint"]
     topics = scan_topic_files(raw_cwd)
+    invalid_topics = _invalid_topic_json_diagnostics(paths["topics_dir"])
     entrypoint = None
     if entrypoint_path.exists():
         entrypoint = truncate_entrypoint_content(entrypoint_path.read_text(encoding="utf-8"))
@@ -1792,6 +1793,8 @@ def memdir_doctor(raw_cwd: str | None = None) -> dict[str, Any]:
         "entrypoint_exists": entrypoint_path.exists(),
         "vector_db_exists": paths["vector_db"].exists(),
         "topic_count": len(topics),
+        "invalid_topic_count": len(invalid_topics),
+        "invalid_topics": invalid_topics,
         "entrypoint_preview": entrypoint,
         "session_state": get_memdir_session_state(raw_cwd) if enabled else None,
         "embedding": _embedding_doctor_status(),
@@ -1824,6 +1827,16 @@ def _detect_written_paths(
         if before.get(path) != current:
             changed.append(path)
     return sorted(changed)
+
+
+def _is_topic_json_path(path: pathlib.Path, topics_dir: pathlib.Path) -> bool:
+    if path.suffix != ".json":
+        return False
+    try:
+        path.relative_to(topics_dir)
+    except ValueError:
+        return False
+    return True
 
 
 def _build_extraction_prompt(
@@ -2057,9 +2070,9 @@ def _extract_with_local_cli(
     return {"ok": True, "reason": "ok"}
 
 
-def _validate_topic_json_files(topics_dir: pathlib.Path) -> list[str]:
+def _validate_topic_json_paths(paths: list[pathlib.Path]) -> list[str]:
     errors: list[str] = []
-    for path in sorted(topics_dir.rglob("*.json")):
+    for path in sorted(paths):
         payload = _load_json_document(path)
         if payload is None:
             errors.append(f"invalid_json:{path}")
@@ -2069,6 +2082,25 @@ def _validate_topic_json_files(topics_dir: pathlib.Path) -> list[str]:
             errors.append(f"missing_content:{path}")
             continue
     return errors
+
+
+def _validate_topic_json_files(topics_dir: pathlib.Path) -> list[str]:
+    return _validate_topic_json_paths(list(topics_dir.rglob("*.json")))
+
+
+def _invalid_topic_json_diagnostics(topics_dir: pathlib.Path) -> list[dict[str, str]]:
+    diagnostics: list[dict[str, str]] = []
+    if not topics_dir.exists():
+        return diagnostics
+    for path in sorted(topics_dir.rglob("*.json")):
+        payload = _load_json_document(path)
+        if payload is None:
+            diagnostics.append({"path": str(path), "reason": "invalid_json"})
+            continue
+        normalized = _coerce_topic_payload(path, payload)
+        if normalized is None:
+            diagnostics.append({"path": str(path), "reason": "missing_content"})
+    return diagnostics
 
 
 def extract_memories_from_event(
@@ -2144,7 +2176,27 @@ def extract_memories_from_event(
             "thread_id": thread_id,
             "memdir": str(memdir),
         }
-    validation_errors = _validate_topic_json_files(topics_dir)
+    after_extractor = _snapshot_storage_files(memdir, topics_dir, manifest_path, vector_db)
+    extractor_written_paths = _detect_written_paths(before, after_extractor)
+    if not result.get("ok"):
+        _record_extraction_failure_status(memdir, extractor, result)
+        return {
+            "updated": False,
+            "reason": result.get("reason", "extract_failed"),
+            "error": result.get("error"),
+            "output": result.get("output"),
+            "llm_usage": result.get("usage"),
+            "llm_elapsed_ms": result.get("elapsed_ms"),
+            "thread_id": thread_id,
+            "memdir": str(memdir),
+            "extractor": extractor,
+        }
+    topic_written_paths = [
+        pathlib.Path(path)
+        for path in extractor_written_paths
+        if _is_topic_json_path(pathlib.Path(path), topics_dir)
+    ]
+    validation_errors = _validate_topic_json_paths(topic_written_paths)
     if validation_errors:
         _record_extraction_failure_status(
             memdir,
@@ -2163,19 +2215,6 @@ def extract_memories_from_event(
     sync_vector_index(raw_cwd, items)
     after = _snapshot_storage_files(memdir, topics_dir, manifest_path, vector_db)
     written_paths = _detect_written_paths(before, after)
-    if not result.get("ok"):
-        _record_extraction_failure_status(memdir, extractor, result)
-        return {
-            "updated": False,
-            "reason": result.get("reason", "extract_failed"),
-            "error": result.get("error"),
-            "output": result.get("output"),
-            "llm_usage": result.get("usage"),
-            "llm_elapsed_ms": result.get("elapsed_ms"),
-            "thread_id": thread_id,
-            "memdir": str(memdir),
-            "extractor": extractor,
-        }
     _clear_extraction_failure_status(memdir)
     return {
         "updated": bool(written_paths),

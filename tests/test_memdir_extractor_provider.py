@@ -35,6 +35,20 @@ def _settings(base_dir: pathlib.Path, provider: str) -> dict[str, object]:
     return settings
 
 
+def _topic_payload(topic_id: str = "topic") -> dict[str, object]:
+    return {
+        "schema_version": 2,
+        "id": topic_id,
+        "name": "Topic",
+        "description": "Topic memory.",
+        "type": "reference",
+        "content": "Topic memory content.",
+        "keywords": ["topic"],
+        "updated_at": "2026-04-21T00:00:00Z",
+        "last_thread_id": "thread-1",
+    }
+
+
 class MemdirExtractorProviderTests(unittest.TestCase):
     def test_codex_exec_disables_hooks_for_child_invocation(self) -> None:
         captured: dict[str, object] = {}
@@ -508,6 +522,136 @@ class MemdirExtractorProviderTests(unittest.TestCase):
         self.assertIn("quota_exceeded", failed_context["system_message"])
         self.assertIn(succeeded["reason"], {"ok", "no_changes"})
         self.assertNotIn("previous project-memdir memory extraction failed", prompt_context["system_message"])
+
+    def test_existing_invalid_topic_json_does_not_block_new_valid_extraction(self) -> None:
+        def fake_run(
+            args: list[str],
+            *,
+            cwd: pathlib.Path,
+            input: str | None,
+            text: bool,
+            capture_output: bool,
+            timeout: int,
+            **kwargs: object,
+        ) -> subprocess.CompletedProcess[str]:
+            topics_dir = pathlib.Path(cwd) / "topics"
+            topics_dir.mkdir(parents=True, exist_ok=True)
+            (topics_dir / "new-valid-topic.json").write_text(
+                json.dumps(_topic_payload("new-valid-topic")),
+                encoding="utf-8",
+            )
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+            settings = _settings(tmp / "memdir", "local_cli")
+            settings["extractor"].update({"local_cli_command": "file-agent"})
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
+                mock.patch("subprocess.run", side_effect=fake_run),
+            ):
+                ensured = memdir.ensure_project_memdir(str(project))
+                topics_dir = pathlib.Path(ensured["topics_dir"])
+                (topics_dir / "old-broken-topic.json").write_text('{"content": "raw " quote"}', encoding="utf-8")
+                result = memdir.extract_memories_from_event(
+                    raw_cwd=str(project),
+                    user_text="remember new valid topic",
+                    assistant_text="ok",
+                    thread_id="thread-valid",
+                )
+                prompt_context = memdir.build_memdir_context(
+                    "next prompt",
+                    str(project),
+                    include_core_paths=False,
+                    require_lexical_match=False,
+                )
+
+        self.assertIn(result["reason"], {"ok", "no_changes"})
+        self.assertNotEqual(result["reason"], "invalid_topic_json")
+        self.assertIn("new-valid-topic.json", [pathlib.Path(path).name for path in result["topic_files"]])
+        self.assertNotIn("previous project-memdir memory extraction failed", prompt_context["system_message"])
+
+    def test_extractor_failure_reason_is_preserved_when_existing_topic_json_is_invalid(self) -> None:
+        def fake_run(
+            args: list[str],
+            *,
+            cwd: pathlib.Path,
+            input: str | None,
+            text: bool,
+            capture_output: bool,
+            timeout: int,
+            **kwargs: object,
+        ) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(args=args, returncode=2, stdout="", stderr="denied")
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+            settings = _settings(tmp / "memdir", "local_cli")
+            settings["extractor"].update({"local_cli_command": "file-agent"})
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
+                mock.patch("subprocess.run", side_effect=fake_run),
+            ):
+                ensured = memdir.ensure_project_memdir(str(project))
+                topics_dir = pathlib.Path(ensured["topics_dir"])
+                (topics_dir / "old-broken-topic.json").write_text('{"content": "raw " quote"}', encoding="utf-8")
+                result = memdir.extract_memories_from_event(
+                    raw_cwd=str(project),
+                    user_text="remember but fail extractor",
+                    assistant_text="ok",
+                    thread_id="thread-fail",
+                )
+
+        self.assertFalse(result["updated"])
+        self.assertEqual(result["reason"], "local_cli_extraction_failed")
+        self.assertEqual(result["extractor"], "local_cli")
+
+    def test_new_invalid_topic_json_from_extractor_fails_extraction(self) -> None:
+        def fake_run(
+            args: list[str],
+            *,
+            cwd: pathlib.Path,
+            input: str | None,
+            text: bool,
+            capture_output: bool,
+            timeout: int,
+            **kwargs: object,
+        ) -> subprocess.CompletedProcess[str]:
+            topics_dir = pathlib.Path(cwd) / "topics"
+            topics_dir.mkdir(parents=True, exist_ok=True)
+            (topics_dir / "new-broken-topic.json").write_text('{"content": "raw " quote"}', encoding="utf-8")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+            settings = _settings(tmp / "memdir", "local_cli")
+            settings["extractor"].update({"local_cli_command": "file-agent"})
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
+                mock.patch("subprocess.run", side_effect=fake_run),
+            ):
+                result = memdir.extract_memories_from_event(
+                    raw_cwd=str(project),
+                    user_text="remember broken topic",
+                    assistant_text="ok",
+                    thread_id="thread-invalid",
+                )
+
+        self.assertFalse(result["updated"])
+        self.assertEqual(result["reason"], "invalid_topic_json")
+        self.assertEqual([pathlib.Path(error.split(":", 1)[1]).name for error in result["errors"]], ["new-broken-topic.json"])
 
     def test_local_cli_provider_sends_prompt_to_file_agent_on_stdin(self) -> None:
         captured: dict[str, object] = {}

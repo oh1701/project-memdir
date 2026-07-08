@@ -430,6 +430,24 @@ class MemdirEmbeddingProviderTests(unittest.TestCase):
         self.assertEqual(first[0]["excerpt"], "Android developer profile memory.")
         self.assertEqual(second[0]["excerpt"], "Kotlin backend memory.")
 
+    def test_memdir_doctor_reports_invalid_topic_json_without_counting_it_as_topic(self) -> None:
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            settings = {"memdir": _settings(tmp / "memdir")}
+            with mock.patch.object(memdir, "load_settings", return_value=settings):
+                ensured = memdir.ensure_project_memdir(str(project))
+                topics_dir = pathlib.Path(ensured["topics_dir"])
+                _topic(topics_dir / "profile.json")
+                (topics_dir / "broken.json").write_text('{"content": "raw " quote"}', encoding="utf-8")
+                doctor = memdir.memdir_doctor(str(project))
+
+        self.assertEqual(doctor["topic_count"], 1)
+        self.assertEqual(doctor["invalid_topic_count"], 1)
+        self.assertEqual([pathlib.Path(item["path"]).name for item in doctor["invalid_topics"]], ["broken.json"])
+        self.assertEqual(doctor["invalid_topics"][0]["reason"], "invalid_json")
+
     def test_query_embedding_cache_skips_repeated_query_api_call(self) -> None:
         calls = 0
         topic_vector = [0.0] * 768
