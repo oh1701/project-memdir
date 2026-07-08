@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "project-memdir",
+  "version": "1.0.5",
+  "description": "Project-local memory injection and extraction helpers for Claude Code.",
+  "author": {
+    "name": "project-memdir maintainers"
+  },
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "hooks",
+    "memory",
+    "memdir"
+  ],
+  "hooks": "./hooks/hooks.json"
+}

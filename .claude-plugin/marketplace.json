@@ -1,0 +1,21 @@
+{
+  "name": "project-memdir-local",
+  "owner": {
+    "name": "project-memdir maintainers"
+  },
+  "metadata": {
+    "description": "Project Memdir plugin for Claude Code.",
+    "version": "1.0.5"
+  },
+  "plugins": [
+    {
+      "name": "project-memdir",
+      "description": "Project-local memory injection and extraction helpers for Claude Code.",
+      "version": "1.0.5",
+      "author": {
+        "name": "project-memdir maintainers"
+      },
+      "source": "./"
+    }
+  ]
+}
