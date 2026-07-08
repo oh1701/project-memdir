@@ -19,6 +19,24 @@ codex plugin add project-memdir@project-memdir-local
 
 Install 中または update 後に Codex が hook review を求めた場合は、この plugin の hooks を承認してください。承認後、新しい Codex session から memory recall が動作します。
 
+GitHub に push した後に Claude Code で install するには、Claude Code 内で次の slash command を実行します。
+
+```text
+/plugin marketplace add oh1701/project-memdir
+/plugin install project-memdir@project-memdir-local
+/reload-plugins
+```
+
+push 前に local checkout で test する場合は、local path を追加します。
+
+```text
+/plugin marketplace add /Users/ogyuseong/Desktop/project-memdir
+/plugin install project-memdir@project-memdir-local
+/reload-plugins
+```
+
+Claude Code が plugin hooks の trust または approval を求めた場合は、この plugin の hooks を承認してください。これにより SessionStart, UserPromptSubmit, Stop hooks が実行されます。Claude Code plugin も、以下で説明する同じ `~/.codex/project-memdir/harness.toml` configuration を使います。
+
 ## Configuration
 
 plugin は default template を `harness.toml.example` として同梱しています。

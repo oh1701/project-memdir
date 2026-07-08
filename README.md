@@ -19,6 +19,24 @@ codex plugin add project-memdir@project-memdir-local
 
 If Codex asks you to review hooks during installation or after an update, approve the hooks for this plugin. Memory recall starts in new Codex sessions after hook approval.
 
+To install in Claude Code after pushing this repository to GitHub, run these slash commands inside Claude Code:
+
+```text
+/plugin marketplace add oh1701/project-memdir
+/plugin install project-memdir@project-memdir-local
+/reload-plugins
+```
+
+For local testing before pushing, add the local checkout instead:
+
+```text
+/plugin marketplace add /Users/ogyuseong/Desktop/project-memdir
+/plugin install project-memdir@project-memdir-local
+/reload-plugins
+```
+
+Claude Code may ask you to trust or approve the plugin hooks. Approve them for this plugin so SessionStart, UserPromptSubmit, and Stop hooks can run. The Claude Code plugin uses the same `~/.codex/project-memdir/harness.toml` configuration described below.
+
 ## Configuration
 
 The plugin ships its default template as `harness.toml.example`.

@@ -19,6 +19,24 @@ codex plugin add project-memdir@project-memdir-local
 
 如果 Codex 在安装或更新后要求 hook review，请批准此 plugin 的 hooks。批准后，新的 Codex session 会开始使用 memory recall。
 
+推送到 GitHub 后，如果要在 Claude Code 中安装，请在 Claude Code 内运行以下 slash commands。
+
+```text
+/plugin marketplace add oh1701/project-memdir
+/plugin install project-memdir@project-memdir-local
+/reload-plugins
+```
+
+如果要在推送前用 local checkout 测试，请添加 local path。
+
+```text
+/plugin marketplace add /Users/ogyuseong/Desktop/project-memdir
+/plugin install project-memdir@project-memdir-local
+/reload-plugins
+```
+
+如果 Claude Code 要求 trust 或 approve plugin hooks，请批准此 plugin 的 hooks。这样 SessionStart、UserPromptSubmit 和 Stop hooks 才能运行。Claude Code plugin 也使用下文说明的同一个 `~/.codex/project-memdir/harness.toml` 配置。
+
 ## 配置
 
 plugin 随附的默认模板是 `harness.toml.example`。
