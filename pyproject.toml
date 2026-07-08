@@ -1,7 +1,7 @@
 [project]
 name = "project-memdir"
 version = "1.0.8"
-description = "Codex-only project-scoped long-term memory hooks"
+description = "Project-scoped long-term memory hooks for Codex and Claude Code"
 requires-python = ">=3.11"
 readme = "README.md"
 license = { file = "LICENSE" }

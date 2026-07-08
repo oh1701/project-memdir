@@ -1,14 +1,16 @@
 # project-memdir
 
-Codex project memory for reusing project-specific knowledge across sessions.
+Project memory for reusing project-specific knowledge across Codex and Claude Code sessions.
 
-`project-memdir` installs Codex hooks that recall relevant project memories when a session starts or when you submit a prompt. After each turn, the Stop hook can queue memory extraction in the background when an extractor is configured.
+`project-memdir` installs Codex or Claude Code hooks that recall relevant project memories when a session starts or when you submit a prompt. After each turn, the Stop hook can queue memory extraction in the background when an extractor is configured.
 
 It stores only project-specific information that is likely to be useful again. One-off questions and low-reuse details are not stored. Stored memories are injected as reference context, not as guaranteed facts.
 
 Translations: [Korean](README.ko.md) | [Japanese](README.ja.md) | [Simplified Chinese](README.zh-CN.md)
 
 ## Installation
+
+### Codex
 
 Add the Git marketplace source, then install the plugin from that source:
 
@@ -18,6 +20,8 @@ codex plugin add project-memdir@project-memdir-local
 ```
 
 If Codex asks you to review hooks during installation or after an update, approve the hooks for this plugin. Memory recall starts in new Codex sessions after hook approval.
+
+### Claude Code
 
 To install in Claude Code after pushing this repository to GitHub, run these slash commands inside Claude Code:
 
@@ -134,7 +138,7 @@ timeout_sec = 15
 
 ## Usage
 
-Open Codex in a project after installing and approving the hooks. The plugin detects the current project, loads that project's memory directory, and injects only relevant memories into the prompt context.
+Open Codex or Claude Code in a project after installing and approving the hooks. The plugin detects the current project, loads that project's memory directory, and injects only relevant memories into the prompt context.
 
 When an extractor provider is configured, completed turns are queued by the Stop hook and processed in the background. Extraction does not block the current turn.
 
@@ -144,7 +148,7 @@ Choose how the project root is resolved with `[memdir.project_root]` in your use
 
 ```toml
 [memdir.project_root]
-# cwd: uses the exact directory where the Codex hook or CLI session starts.
+# cwd: uses the exact directory where the hook or CLI session starts.
 #      This is the default on POSIX and Windows.
 # detect: walks upward from that directory and uses project markers or Git.
 strategy = "cwd"
@@ -173,16 +177,18 @@ Delete those files only when you intentionally want to remove stored memories.
 ## Requirements
 
 - Python 3.11 or newer
-- Codex plugin support
+- Codex or Claude Code plugin support
 - Optional: `codex` CLI for the `codex` extractor
 - Optional: `agy` CLI for the `agy` extractor
 - Optional: Cloudflare Workers AI credentials for remote embeddings
 
-On macOS and Linux, the installed hooks use `sh` and the bundled launcher, which tries `python3` and then `python`. The manual CLI launcher uses the same fallback order.
+On macOS and Linux, Codex hooks use `sh` and the bundled launcher, which tries `python3` and then `python`. The manual CLI launcher uses the same fallback order.
 
-On Windows, the installed hooks use `py -3` for `SessionStart` and `UserPromptSubmit`, and the manual CLI launcher tries `py -3`, `python`, then `python3`. The `Stop` hook uses PowerShell to queue extraction without blocking the turn.
+On Windows, Codex hooks use `py -3` for `SessionStart` and `UserPromptSubmit`. The `Stop` hook uses PowerShell to queue extraction without blocking the turn. Claude Code hooks use a Node dispatcher that tries the available Python launcher on each OS.
 
 ## Uninstall
+
+### Codex
 
 Remove the plugin and marketplace source:
 
@@ -190,6 +196,17 @@ Remove the plugin and marketplace source:
 codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
+
+### Claude Code
+
+Remove the plugin and marketplace source. `--keep-data` preserves the plugin's persistent Claude Code data directory:
+
+```sh
+claude plugin remove project-memdir@project-memdir-local --keep-data
+claude plugin marketplace remove project-memdir-local
+```
+
+### User Data
 
 To remove the user config and stored memories too, delete the stable user data directory.
 

@@ -1,14 +1,16 @@
 # project-memdir
 
-用于在 Codex sessions 之间复用项目知识的 project memory。
+用于在 Codex 和 Claude Code sessions 之间复用项目知识的 project memory。
 
-`project-memdir` 会安装 Codex hooks，在 session start 和 prompt submit 时加载相关 project memory。配置 extractor 后，每个 turn 结束时 Stop hook 会把 memory extraction 加入后台 queue。
+`project-memdir` 会安装 Codex 或 Claude Code hooks，在 session start 和 prompt submit 时加载相关 project memory。配置 extractor 后，每个 turn 结束时 Stop hook 会把 memory extraction 加入后台 queue。
 
 它只保存之后可能复用的项目相关信息。一次性问题或复用价值较低的细节不会被保存。已保存的 memories 会作为参考上下文注入，而不是作为确定事实。
 
 翻译: [English](README.md) | [Korean](README.ko.md) | [Japanese](README.ja.md)
 
 ## 安装
+
+### Codex
 
 添加 Git marketplace source，然后从该 source 安装 plugin。
 
@@ -18,6 +20,8 @@ codex plugin add project-memdir@project-memdir-local
 ```
 
 如果 Codex 在安装或更新后要求 hook review，请批准此 plugin 的 hooks。批准后，新的 Codex session 会开始使用 memory recall。
+
+### Claude Code
 
 推送到 GitHub 后，如果要在 Claude Code 中安装，请在 Claude Code 内运行以下 slash commands。
 
@@ -134,7 +138,7 @@ timeout_sec = 15
 
 ## 使用
 
-完成安装和 hook approval 后，在项目中打开 Codex 即可。plugin 会检测当前 project，加载该 project 的 memory directory，并只把相关 memories 注入 prompt context。
+完成安装和 hook approval 后，在项目中打开 Codex 或 Claude Code。plugin 会检测当前 project，加载该 project 的 memory directory，并只把相关 memories 注入 prompt context。
 
 配置 extractor provider 后，完成的 turns 会通过 Stop hook 进入 queue，并在后台处理。extraction 不会阻塞当前 turn。
 
@@ -144,7 +148,7 @@ project root 的解析方式由用户 `harness.toml` 中的 `[memdir.project_roo
 
 ```toml
 [memdir.project_root]
-# cwd: 使用 Codex hook 或 CLI session 启动时所在的精确目录。
+# cwd: 使用 hook 或 CLI session 启动时所在的精确目录。
 #      这是 POSIX 和 Windows 的默认值。
 # detect: 从该目录向上查找，并使用 project markers 或 Git。
 strategy = "cwd"
@@ -173,16 +177,18 @@ project_dir_name = ".project-memdir"
 ## 要求
 
 - Python 3.11 或更高版本
-- Codex plugin support
+- Codex or Claude Code plugin support
 - 可选：使用 `codex` extractor 时需要 `codex` CLI
 - 可选：使用 `agy` extractor 时需要 `agy` CLI
 - 可选：使用 remote embeddings 时需要 Cloudflare Workers AI credentials
 
-在 macOS 和 Linux 上，installed hooks 使用 `sh` 和 bundled launcher，会先尝试 `python3`，再尝试 `python`。手动 CLI launcher 也使用相同的 fallback 顺序。
+在 macOS 和 Linux 上，Codex hooks 使用 `sh` 和 bundled launcher，会先尝试 `python3`，再尝试 `python`。手动 CLI launcher 也使用相同的 fallback 顺序。
 
-在 Windows 上，installed hooks 会对 `SessionStart` 和 `UserPromptSubmit` 使用 `py -3`，手动 CLI launcher 会按 `py -3`、`python`、`python3` 的顺序尝试。`Stop` hook 使用 PowerShell 将 extraction 加入 queue，不会阻塞当前 turn。
+在 Windows 上，Codex hooks 会对 `SessionStart` 和 `UserPromptSubmit` 使用 `py -3`。`Stop` hook 使用 PowerShell 将 extraction 加入 queue，不会阻塞当前 turn。Claude Code hooks 使用 Node dispatcher，在每个 OS 上尝试可用的 Python launcher。
 
 ## 卸载
+
+### Codex
 
 移除 plugin 和 marketplace source。
 
@@ -190,6 +196,17 @@ project_dir_name = ".project-memdir"
 codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
+
+### Claude Code
+
+移除 plugin 和 marketplace source。`--keep-data` 会保留 plugin 的 Claude Code persistent data directory。
+
+```sh
+claude plugin remove project-memdir@project-memdir-local --keep-data
+claude plugin marketplace remove project-memdir-local
+```
+
+### User Data
 
 如果也要删除 user config 和已保存 memories，请删除 stable user data directory。
 

@@ -1,14 +1,16 @@
 # project-memdir
 
-Codex session 間で project 固有の知識を再利用するための project memory です。
+Codex と Claude Code の session 間で project 固有の知識を再利用するための project memory です。
 
-`project-memdir` は Codex hooks を install し、session start と prompt submit のタイミングで関連する project memory を読み込みます。extractor を設定すると、各 turn の終了後に Stop hook が memory extraction を background queue に追加します。
+`project-memdir` は Codex または Claude Code hooks を install し、session start と prompt submit のタイミングで関連する project memory を読み込みます。extractor を設定すると、各 turn の終了後に Stop hook が memory extraction を background queue に追加します。
 
 再利用される可能性が高い project 固有の情報だけを保存します。一度きりの質問や再利用性の低い details は保存しません。保存された memory は、保証された facts ではなく reference context として注入されます。
 
 翻訳: [English](README.md) | [Korean](README.ko.md) | [Simplified Chinese](README.zh-CN.md)
 
 ## Install
+
+### Codex
 
 Git marketplace source を追加し、その source から plugin を install します。
 
@@ -18,6 +20,8 @@ codex plugin add project-memdir@project-memdir-local
 ```
 
 Install 中または update 後に Codex が hook review を求めた場合は、この plugin の hooks を承認してください。承認後、新しい Codex session から memory recall が動作します。
+
+### Claude Code
 
 GitHub に push した後に Claude Code で install するには、Claude Code 内で次の slash command を実行します。
 
@@ -134,7 +138,7 @@ timeout_sec = 15
 
 ## Usage
 
-Install と hook approval が終わったら、project で Codex を開くだけです。plugin は現在の project を検出し、その project の memory directory を読み込み、関連する memory だけを prompt context に注入します。
+Install と hook approval が終わったら、project で Codex または Claude Code を開きます。plugin は現在の project を検出し、その project の memory directory を読み込み、関連する memory だけを prompt context に注入します。
 
 extractor provider を設定すると、完了した turn は Stop hook によって queue に入り、background で処理されます。extraction は現在の turn を block しません。
 
@@ -144,7 +148,7 @@ project root の解決方法は user `harness.toml` の `[memdir.project_root]` 
 
 ```toml
 [memdir.project_root]
-# cwd: Codex hook または CLI session が開始した正確な directory を使います。
+# cwd: hook または CLI session が開始した正確な directory を使います。
 #      POSIX と Windows の default です。
 # detect: その directory から上にたどり、project markers または Git を使います。
 strategy = "cwd"
@@ -173,16 +177,18 @@ project_dir_name = ".project-memdir"
 ## Requirements
 
 - Python 3.11 or newer
-- Codex plugin support
+- Codex or Claude Code plugin support
 - Optional: `codex` CLI for the `codex` extractor
 - Optional: `agy` CLI for the `agy` extractor
 - Optional: Cloudflare Workers AI credentials for remote embeddings
 
-macOS と Linux では、installed hooks は `sh` と bundled launcher を使い、`python3` を試してから `python` を試します。Manual CLI launcher も同じ順序で fallback します。
+macOS と Linux では、Codex hooks は `sh` と bundled launcher を使い、`python3` を試してから `python` を試します。Manual CLI launcher も同じ順序で fallback します。
 
-Windows では、installed hooks は `SessionStart` と `UserPromptSubmit` に `py -3` を使い、manual CLI launcher は `py -3`, `python`, `python3` の順に試します。`Stop` hook は PowerShell で extraction を queue に入れ、現在の turn を block しません。
+Windows では、Codex hooks は `SessionStart` と `UserPromptSubmit` に `py -3` を使います。`Stop` hook は PowerShell で extraction を queue に入れ、現在の turn を block しません。Claude Code hooks は各 OS で利用可能な Python launcher を試す Node dispatcher を使います。
 
 ## Uninstall
+
+### Codex
 
 plugin と marketplace source を remove します。
 
@@ -190,6 +196,17 @@ plugin と marketplace source を remove します。
 codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
+
+### Claude Code
+
+plugin と marketplace source を remove します。`--keep-data` は plugin の Claude Code persistent data directory を保持します。
+
+```sh
+claude plugin remove project-memdir@project-memdir-local --keep-data
+claude plugin marketplace remove project-memdir-local
+```
+
+### User Data
 
 user config と保存済み memory も削除する場合は、stable user data directory を削除します。
 

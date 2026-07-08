@@ -1,14 +1,16 @@
 # project-memdir
 
-Codex 세션 사이에서 프로젝트별 지식을 재사용하기 위한 프로젝트 메모리입니다.
+Codex와 Claude Code 세션 사이에서 프로젝트별 지식을 재사용하기 위한 프로젝트 메모리입니다.
 
-`project-memdir`는 Codex hook을 설치해 세션 시작 시점과 프롬프트 제출 시점에 관련 프로젝트 메모리를 불러옵니다. extractor를 설정하면 각 턴이 끝난 뒤 Stop hook이 메모리 추출 작업을 백그라운드 queue에 넣습니다.
+`project-memdir`는 Codex 또는 Claude Code hook을 설치해 세션 시작 시점과 프롬프트 제출 시점에 관련 프로젝트 메모리를 불러옵니다. extractor를 설정하면 각 턴이 끝난 뒤 Stop hook이 메모리 추출 작업을 백그라운드 queue에 넣습니다.
 
 다시 사용할 가능성이 높은 프로젝트별 정보만 저장합니다. 일회성 질문이나 재사용성이 낮은 세부 정보는 저장하지 않습니다. 저장된 메모리는 보장된 사실이 아니라 참고 context로 주입됩니다.
 
 번역: [English](README.md) | [Japanese](README.ja.md) | [Simplified Chinese](README.zh-CN.md)
 
 ## 설치
+
+### Codex
 
 Git marketplace source를 추가한 다음, 그 source에서 plugin을 설치합니다.
 
@@ -18,6 +20,8 @@ codex plugin add project-memdir@project-memdir-local
 ```
 
 설치 중 또는 업데이트 후 Codex가 hook review를 요구하면 이 plugin의 hook을 승인하세요. 승인 후 새 Codex 세션부터 메모리 recall이 동작합니다.
+
+### Claude Code
 
 GitHub에 push한 뒤 Claude Code에서 설치하려면 Claude Code 안에서 다음 slash command를 실행합니다.
 
@@ -134,7 +138,7 @@ timeout_sec = 15
 
 ## 사용
 
-설치와 hook 승인을 마친 뒤 프로젝트에서 Codex를 열면 됩니다. plugin은 현재 프로젝트를 감지하고 해당 프로젝트의 메모리 디렉터리를 불러와 관련 있는 메모리만 prompt context에 주입합니다.
+설치와 hook 승인을 마친 뒤 프로젝트에서 Codex 또는 Claude Code를 열면 됩니다. plugin은 현재 프로젝트를 감지하고 해당 프로젝트의 메모리 디렉터리를 불러와 관련 있는 메모리만 prompt context에 주입합니다.
 
 extractor provider를 설정하면 완료된 턴은 Stop hook을 통해 queue에 들어가고 백그라운드에서 처리됩니다. 추출 작업은 현재 턴을 막지 않습니다.
 
@@ -144,7 +148,7 @@ extractor provider를 설정하면 완료된 턴은 Stop hook을 통해 queue에
 
 ```toml
 [memdir.project_root]
-# cwd: Codex hook 또는 CLI 세션이 시작된 정확한 디렉터리를 사용합니다.
+# cwd: hook 또는 CLI 세션이 시작된 정확한 디렉터리를 사용합니다.
 #      POSIX와 Windows의 기본값입니다.
 # detect: 해당 디렉터리에서 위로 올라가며 프로젝트 마커나 Git을 사용합니다.
 strategy = "cwd"
@@ -173,16 +177,18 @@ project_dir_name = ".project-memdir"
 ## 요구사항
 
 - Python 3.11 이상
-- Codex plugin 지원
+- Codex 또는 Claude Code plugin 지원
 - 선택: `codex` extractor 사용 시 `codex` CLI
 - 선택: `agy` extractor 사용 시 `agy` CLI
 - 선택: 원격 embeddings 사용 시 Cloudflare Workers AI credentials
 
-macOS와 Linux에서 설치된 hook은 `sh`와 번들 launcher를 사용하며, `python3`를 먼저 시도한 뒤 `python`을 시도합니다. 수동 CLI launcher도 같은 순서로 fallback합니다.
+macOS와 Linux에서 Codex hook은 `sh`와 번들 launcher를 사용하며, `python3`를 먼저 시도한 뒤 `python`을 시도합니다. 수동 CLI launcher도 같은 순서로 fallback합니다.
 
-Windows에서 설치된 hook은 `SessionStart`와 `UserPromptSubmit`에 `py -3`를 사용하며, 수동 CLI launcher는 `py -3`, `python`, `python3` 순서로 시도합니다. `Stop` hook은 PowerShell로 extraction을 queue에 넣고 현재 턴을 막지 않습니다.
+Windows에서 Codex hook은 `SessionStart`와 `UserPromptSubmit`에 `py -3`를 사용합니다. `Stop` hook은 PowerShell로 extraction을 queue에 넣고 현재 턴을 막지 않습니다. Claude Code hook은 각 OS에서 사용 가능한 Python launcher를 시도하는 Node dispatcher를 사용합니다.
 
 ## 제거
+
+### Codex
 
 plugin과 marketplace source를 제거합니다.
 
@@ -190,6 +196,17 @@ plugin과 marketplace source를 제거합니다.
 codex plugin remove project-memdir@project-memdir-local
 codex plugin marketplace remove project-memdir-local
 ```
+
+### Claude Code
+
+plugin과 marketplace source를 제거합니다. `--keep-data`는 plugin의 Claude Code persistent data directory를 보존합니다.
+
+```sh
+claude plugin remove project-memdir@project-memdir-local --keep-data
+claude plugin marketplace remove project-memdir-local
+```
+
+### 사용자 데이터
 
 사용자 설정과 저장된 메모리까지 제거하려면 stable user data directory를 삭제합니다.
 
