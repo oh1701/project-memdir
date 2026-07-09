@@ -59,7 +59,6 @@ EXTRACTOR_LEGACY_ALIASES = {
     "extract_agy_bin": "agy_bin",
     "extract_agy_extraction_timeout_sec": "agy_extraction_timeout_sec",
     "extract_agy_model": "agy_model",
-    "extract_claudecode_command": "claudecode_command",
     "extract_claudecode_extraction_timeout_sec": "claudecode_extraction_timeout_sec",
     "extract_claudecode_model": "claudecode_model",
     "extract_local_cli_command": "local_cli_command",
@@ -2060,15 +2059,7 @@ def _extract_with_claudecode(
         assistant_text=assistant_text,
         existing_memories=existing_memories,
     )
-    command_template = os.path.expandvars(str(settings.get("claudecode_command") or "claude").strip())
-    command = _split_command_template(command_template)
-    if not command:
-        return {
-            "ok": False,
-            "reason": "claudecode_extraction_failed",
-            "error": "extract_claudecode_command parsed to no executable",
-        }
-    command.extend(["-p", prompt, "--dangerously-skip-permissions"])
+    command = ["claude", "-p", prompt, "--dangerously-skip-permissions"]
     model = _configured_extractor_model(settings, "claudecode_model", CLAUDECODE_DEFAULT_MODEL)
     if model:
         command.extend(["--model", model])

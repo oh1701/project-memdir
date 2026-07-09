@@ -100,17 +100,7 @@ Claude Code를 파일 작성 extractor로 사용할 수도 있습니다.
 ```toml
 [memdir.extractor]
 provider = "claudecode"
-claudecode_command = "claude"
 claudecode_model = "claudecode-default-model"
-```
-
-Ollama의 Claude Code integration으로 테스트하려면 Ollama launch flag는 `claudecode_command`에 두고, memdir가 뒤에 붙이는 Claude Code 인자 앞에 `--` 구분자를 포함합니다.
-
-```toml
-[memdir.extractor]
-provider = "claudecode"
-claudecode_command = "ollama launch claude --model gemma4:31b-cloud --"
-claudecode_model = ""
 ```
 
 파일을 직접 작성하는 local command도 사용할 수 있습니다.
@@ -200,7 +190,7 @@ project_dir_name = ".project-memdir"
 - Codex 또는 Claude Code plugin 지원
 - 선택: `codex` extractor 사용 시 `codex` CLI
 - 선택: `agy` extractor 사용 시 `agy` CLI
-- 선택: `claudecode` extractor 사용 시 `claude` CLI 또는 Ollama Claude Code integration
+- 선택: `claudecode` extractor 사용 시 `claude` CLI
 - 선택: 원격 embeddings 사용 시 Cloudflare Workers AI credentials
 
 macOS와 Linux에서 Codex hook은 `sh`와 번들 launcher를 사용하며, `python3`를 먼저 시도한 뒤 `python`을 시도합니다. 수동 CLI launcher도 같은 순서로 fallback합니다.

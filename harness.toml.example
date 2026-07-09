@@ -54,7 +54,7 @@ query_cache_max_entries = 256
 
 # Supported values:
 # - "agy": uses `agy -p ...` and can select a model with `agy_model`.
-# - "claudecode": uses `claude -p ...` or a compatible launch command.
+# - "claudecode": uses `claude -p ...`.
 # - "codex": uses `codex exec` to write topic JSON files.
 # - "local_cli": sends the extraction prompt to a local command through stdin or `{prompt}`.
 #   For local CLI, only configure an agent or command that can create topic JSON result files.
@@ -76,7 +76,6 @@ agy_bin = "agy"
 agy_extraction_timeout_sec = 90
 agy_model = "agy-default-model"
 
-claudecode_command = "claude"
 claudecode_extraction_timeout_sec = 90
 claudecode_model = "claudecode-default-model"
 

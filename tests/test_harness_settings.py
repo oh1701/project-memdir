@@ -33,7 +33,6 @@ class HarnessSettingsTests(unittest.TestCase):
         self.assertEqual(memdir["extractor"]["provider"], "")
         self.assertEqual(memdir["extractor"]["codex_model"], "")
         self.assertEqual(memdir["extractor"]["agy_model"], "agy-default-model")
-        self.assertEqual(memdir["extractor"]["claudecode_command"], "claude")
         self.assertEqual(memdir["extractor"]["claudecode_model"], "claudecode-default-model")
         self.assertEqual(memdir["extractor"]["local_cli_command"], 'python "${CODEX_ROOT}/examples/local_extractor.py"')
         legacy_root_keys = {
@@ -51,7 +50,6 @@ class HarnessSettingsTests(unittest.TestCase):
             "extract_agy_bin",
             "extract_agy_extraction_timeout_sec",
             "extract_agy_model",
-            "extract_claudecode_command",
             "extract_claudecode_extraction_timeout_sec",
             "extract_claudecode_model",
             "extract_local_cli_command",
@@ -184,7 +182,6 @@ class HarnessSettingsTests(unittest.TestCase):
                         'agy_bin = "agy"',
                         "agy_extraction_timeout_sec = 7",
                         'agy_model = ""',
-                        'claudecode_command = "claude"',
                         "claudecode_extraction_timeout_sec = 31",
                         'claudecode_model = "sonnet"',
                         'local_cli_command = "python3 example.py"',
@@ -210,7 +207,6 @@ class HarnessSettingsTests(unittest.TestCase):
         self.assertEqual(memdir["storage"]["project_dir_name"], ".custom-memdir")
         self.assertEqual(memdir["extractor"]["provider"], "local_cli")
         self.assertEqual(memdir["extractor"]["codex_model"], "gpt-5.4-mini")
-        self.assertEqual(memdir["extractor"]["claudecode_command"], "claude")
         self.assertEqual(memdir["extractor"]["claudecode_extraction_timeout_sec"], 31)
         self.assertEqual(memdir["extractor"]["claudecode_model"], "sonnet")
         self.assertEqual(memdir["extractor"]["local_cli_command"], "python3 example.py")
@@ -230,7 +226,6 @@ class HarnessSettingsTests(unittest.TestCase):
             "extract_agy_bin",
             "extract_agy_extraction_timeout_sec",
             "extract_agy_model",
-            "extract_claudecode_command",
             "extract_claudecode_extraction_timeout_sec",
             "extract_claudecode_model",
             "extract_local_cli_command",
@@ -387,8 +382,7 @@ class HarnessSettingsTests(unittest.TestCase):
                         "embedding_failure_backoff_sec = 60",
                         "query_embedding_cache_max_entries = 3",
                         'extractor_provider = "local_cli"',
-                        'extract_claudecode_command = "ollama launch claude --"',
-                        'extract_claudecode_model = "gemma4:31b-cloud"',
+                        'extract_claudecode_model = "sonnet"',
                         'extract_local_cli_command = "local-llm"',
                     ]
                 ),
@@ -405,8 +399,7 @@ class HarnessSettingsTests(unittest.TestCase):
         self.assertEqual(memdir["embedding"]["failure_backoff_sec"], 60)
         self.assertEqual(memdir["embedding"]["query_cache_max_entries"], 3)
         self.assertEqual(memdir["extractor"]["provider"], "local_cli")
-        self.assertEqual(memdir["extractor"]["claudecode_command"], "ollama launch claude --")
-        self.assertEqual(memdir["extractor"]["claudecode_model"], "gemma4:31b-cloud")
+        self.assertEqual(memdir["extractor"]["claudecode_model"], "sonnet")
         self.assertEqual(memdir["extractor"]["local_cli_command"], "local-llm")
 
 

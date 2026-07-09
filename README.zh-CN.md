@@ -100,17 +100,7 @@ agy_model = "agy-default-model"
 ```toml
 [memdir.extractor]
 provider = "claudecode"
-claudecode_command = "claude"
 claudecode_model = "claudecode-default-model"
-```
-
-如果要通过 Ollama 的 Claude Code integration 测试，请把 Ollama launch flags 放在 `claudecode_command` 中，并在 memdir 后续追加的 Claude Code arguments 前包含 `--` 分隔符。
-
-```toml
-[memdir.extractor]
-provider = "claudecode"
-claudecode_command = "ollama launch claude --model gemma4:31b-cloud --"
-claudecode_model = ""
 ```
 
 也可以使用能直接写文件的 local command。
@@ -200,7 +190,7 @@ project_dir_name = ".project-memdir"
 - Codex or Claude Code plugin support
 - 可选：使用 `codex` extractor 时需要 `codex` CLI
 - 可选：使用 `agy` extractor 时需要 `agy` CLI
-- 可选：使用 `claudecode` extractor 时需要 `claude` CLI 或 Ollama Claude Code integration
+- 可选：使用 `claudecode` extractor 时需要 `claude` CLI
 - 可选：使用 remote embeddings 时需要 Cloudflare Workers AI credentials
 
 在 macOS 和 Linux 上，Codex hooks 使用 `sh` 和 bundled launcher，会先尝试 `python3`，再尝试 `python`。手动 CLI launcher 也使用相同的 fallback 顺序。

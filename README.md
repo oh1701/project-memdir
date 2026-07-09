@@ -100,17 +100,7 @@ You can use Claude Code as a file-writing extractor:
 ```toml
 [memdir.extractor]
 provider = "claudecode"
-claudecode_command = "claude"
 claudecode_model = "claudecode-default-model"
-```
-
-For Ollama's Claude Code integration, keep Ollama's launch flags in `claudecode_command` and include `--` before the Claude Code arguments that memdir appends:
-
-```toml
-[memdir.extractor]
-provider = "claudecode"
-claudecode_command = "ollama launch claude --model gemma4:31b-cloud --"
-claudecode_model = ""
 ```
 
 Or a file-writing local command:
@@ -200,7 +190,7 @@ Delete those files only when you intentionally want to remove stored memories.
 - Codex or Claude Code plugin support
 - Optional: `codex` CLI for the `codex` extractor
 - Optional: `agy` CLI for the `agy` extractor
-- Optional: `claude` CLI or an Ollama Claude Code integration for the `claudecode` extractor
+- Optional: `claude` CLI for the `claudecode` extractor
 - Optional: Cloudflare Workers AI credentials for remote embeddings
 
 On macOS and Linux, Codex hooks use `sh` and the bundled launcher, which tries `python3` and then `python`. The manual CLI launcher uses the same fallback order.

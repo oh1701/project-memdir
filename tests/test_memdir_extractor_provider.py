@@ -410,7 +410,6 @@ class MemdirExtractorProviderTests(unittest.TestCase):
             settings = _settings(tmp / "memdir", "claudecode")
             settings["extractor"].update(
                 {
-                    "claudecode_command": "ollama launch claude --model gemma4:31b-cloud --",
                     "claudecode_extraction_timeout_sec": 13,
                     "claudecode_model": "",
                 }
@@ -430,10 +429,9 @@ class MemdirExtractorProviderTests(unittest.TestCase):
         self.assertTrue(result["updated"])
         self.assertEqual(result["extractor"], "claudecode")
         self.assertTrue(result["topic_files"])
-        self.assertEqual(captured["args"][0:6], ["ollama", "launch", "claude", "--model", "gemma4:31b-cloud", "--"])
-        self.assertEqual(captured["args"][6:7], ["-p"])
-        self.assertIn("Only create or modify JSON files under the topics directory.", captured["args"][7])
-        self.assertEqual(captured["args"][8:], ["--dangerously-skip-permissions"])
+        self.assertEqual(captured["args"][0:2], ["claude", "-p"])
+        self.assertIn("Only create or modify JSON files under the topics directory.", captured["args"][2])
+        self.assertEqual(captured["args"][3:], ["--dangerously-skip-permissions"])
         self.assertEqual(captured["cwd"], pathlib.Path(result["memdir"]) / "topics")
         self.assertIs(captured["text"], True)
         self.assertIs(captured["capture_output"], True)
@@ -504,7 +502,7 @@ class MemdirExtractorProviderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw_tmp:
             tmp = pathlib.Path(raw_tmp)
             settings = _settings(tmp / "settings", "claudecode")
-            settings["extractor"].update({"claudecode_command": "claude", "claudecode_model": "sonnet"})
+            settings["extractor"].update({"claudecode_model": "sonnet"})
 
             with (
                 mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
