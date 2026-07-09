@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from unittest import mock
 
 
@@ -94,6 +95,16 @@ class MemdirExtractorProviderTests(unittest.TestCase):
 
     def test_codex_provider_uses_codex_exec_topic_write_path(self) -> None:
         captured: dict[str, object] = {}
+        global_lock_depth = 0
+
+        @contextmanager
+        def tracked_global_lock():
+            nonlocal global_lock_depth
+            global_lock_depth += 1
+            try:
+                yield
+            finally:
+                global_lock_depth -= 1
 
         with tempfile.TemporaryDirectory() as raw_tmp:
             tmp = pathlib.Path(raw_tmp)
@@ -105,6 +116,7 @@ class MemdirExtractorProviderTests(unittest.TestCase):
             settings = {"memdir": memdir_settings}
 
             def fake_run_codex_exec(**kwargs: object) -> subprocess.CompletedProcess[str]:
+                self.assertEqual(global_lock_depth, 0)
                 captured.update(kwargs)
                 topics_dir = pathlib.Path(kwargs["cwd"])
                 topics_dir.mkdir(parents=True, exist_ok=True)
@@ -129,6 +141,7 @@ class MemdirExtractorProviderTests(unittest.TestCase):
 
             with (
                 mock.patch.object(memdir, "load_settings", return_value=settings),
+                mock.patch.object(memdir, "project_memdir_file_lock", tracked_global_lock),
                 mock.patch.object(memdir, "run_codex_exec", side_effect=fake_run_codex_exec) as run_codex,
             ):
                 result = memdir.extract_memories_from_event(
@@ -146,6 +159,62 @@ class MemdirExtractorProviderTests(unittest.TestCase):
         self.assertEqual(captured.get("sandbox"), "danger-full-access")
         self.assertIn("The current working directory is the topics directory.", captured.get("prompt"))
         run_codex.assert_called_once()
+
+    def test_external_extractors_run_outside_global_memdir_lock(self) -> None:
+        cases = ("agy", "claudecode", "local_cli")
+
+        for provider in cases:
+            with self.subTest(provider=provider):
+                global_lock_depth = 0
+
+                @contextmanager
+                def tracked_global_lock():
+                    nonlocal global_lock_depth
+                    global_lock_depth += 1
+                    try:
+                        yield
+                    finally:
+                        global_lock_depth -= 1
+
+                def fake_run(
+                    args: list[str],
+                    *,
+                    cwd: pathlib.Path,
+                    **kwargs: object,
+                ) -> subprocess.CompletedProcess[str]:
+                    self.assertEqual(global_lock_depth, 0)
+                    output_dir = pathlib.Path(cwd)
+                    topics_dir = output_dir if provider == "claudecode" else output_dir / "topics"
+                    topics_dir.mkdir(parents=True, exist_ok=True)
+                    (topics_dir / f"{provider}-outside-lock.json").write_text(
+                        json.dumps(_topic_payload(f"{provider}-outside-lock")),
+                        encoding="utf-8",
+                    )
+                    return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
+
+                with tempfile.TemporaryDirectory() as raw_tmp:
+                    tmp = pathlib.Path(raw_tmp)
+                    project = tmp / "project"
+                    project.mkdir()
+                    (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+                    settings = _settings(tmp / "memdir", provider)
+                    if provider == "local_cli":
+                        settings["extractor"].update({"local_cli_command": "file-agent"})
+
+                    with (
+                        mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
+                        mock.patch.object(memdir, "project_memdir_file_lock", tracked_global_lock),
+                        mock.patch("subprocess.run", side_effect=fake_run),
+                    ):
+                        result = memdir.extract_memories_from_event(
+                            raw_cwd=str(project),
+                            user_text=f"remember via {provider}",
+                            assistant_text="ok",
+                            thread_id=f"thread-{provider}",
+                        )
+
+                self.assertTrue(result["updated"])
+                self.assertEqual(result["extractor"], provider)
 
     def test_extract_event_fails_when_extractor_provider_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as raw_tmp:

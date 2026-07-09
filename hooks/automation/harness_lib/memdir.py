@@ -20,7 +20,7 @@ from typing import Any
 from .codex_exec import run_codex_exec
 from .paths import canonicalize_existing_path, detect_project_root, project_slug
 from .settings import CODEX_ROOT, HARNESS_CONFIG_PATH, load_settings
-from .utils import atomic_write_json, ensure_dir, project_memdir_file_lock, utc_now_iso
+from .utils import atomic_write_json, ensure_dir, file_lock, project_memdir_file_lock, utc_now_iso
 
 
 MANIFEST_NAME = "manifest.json"
@@ -29,6 +29,7 @@ PROLOGUE_NAME = "memdir-prologue.md"
 TOPICS_DIR_NAME = "topics"
 VECTOR_DB_NAME = "vector_index.sqlite3"
 EXTRACTION_STATUS_NAME = "extraction_status.json"
+EXTRACTION_LOCK_NAME = ".extract.lock"
 MEMORY_SCHEMA_VERSION = 2
 EMBEDDING_FAILURE_RETRY_AFTER_META_KEY = "embedding_failure_retry_after"
 EMBEDDING_FAILURE_REASON_META_KEY = "embedding_failure_reason"
@@ -270,6 +271,10 @@ def get_entrypoint_path(raw_cwd: str | None = None) -> pathlib.Path:
 
 def get_extraction_status_path(raw_cwd: str | None = None) -> pathlib.Path:
     return resolve_project_paths(raw_cwd)["memdir"] / EXTRACTION_STATUS_NAME
+
+
+def get_extraction_lock_path(raw_cwd: str | None = None) -> pathlib.Path:
+    return resolve_project_paths(raw_cwd)["memdir"] / EXTRACTION_LOCK_NAME
 
 
 def get_user_prompt_submit_state_path(raw_cwd: str | None = None) -> pathlib.Path:
@@ -2224,16 +2229,24 @@ def extract_memories_from_event(
     if not user_text.strip() or not assistant_text.strip():
         return {"updated": False, "reason": "missing_text"}
 
-    with project_memdir_file_lock():
-        return _extract_memories_from_event_locked(
-            raw_cwd=raw_cwd,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            thread_id=thread_id,
-        )
+    with file_lock(get_extraction_lock_path(raw_cwd)):
+        with project_memdir_file_lock():
+            prepared = _prepare_extraction_locked(
+                raw_cwd=raw_cwd,
+                user_text=user_text,
+                assistant_text=assistant_text,
+                thread_id=thread_id,
+            )
+        if prepared.get("result") is not None:
+            result = prepared["result"]
+            return result if isinstance(result, dict) else {"updated": False, "reason": "extract_failed"}
+
+        extractor_result = _run_prepared_extractor(prepared)
+        with project_memdir_file_lock():
+            return _finalize_extraction_locked(prepared, extractor_result)
 
 
-def _extract_memories_from_event_locked(
+def _prepare_extraction_locked(
     *,
     raw_cwd: str,
     user_text: str,
@@ -2256,59 +2269,102 @@ def _extract_memories_from_event_locked(
         }
         _record_extraction_failure_status(memdir, "undefined", result)
         return {
-            "updated": False,
-            "reason": "missing_extractor_provider",
-            "thread_id": thread_id,
-            "memdir": str(memdir),
+            "result": {
+                "updated": False,
+                "reason": "missing_extractor_provider",
+                "thread_id": thread_id,
+                "memdir": str(memdir),
+            }
         }
-    if extractor == "codex":
-        result = _extract_with_codex(
-            memdir=memdir,
-            project_root=project_root,
-            topics_dir=topics_dir,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            existing_memories=existing_memories,
-        )
-    elif extractor == "agy":
-        result = _extract_with_agy(
-            memdir=memdir,
-            project_root=project_root,
-            topics_dir=topics_dir,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            existing_memories=existing_memories,
-        )
-    elif extractor == "claudecode":
-        result = _extract_with_claudecode(
-            memdir=memdir,
-            project_root=project_root,
-            topics_dir=topics_dir,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            existing_memories=existing_memories,
-        )
-    elif extractor == "local_cli":
-        result = _extract_with_local_cli(
-            memdir=memdir,
-            project_root=project_root,
-            topics_dir=topics_dir,
-            user_text=user_text,
-            assistant_text=assistant_text,
-            existing_memories=existing_memories,
-        )
-    else:
+    if extractor not in {"codex", "agy", "claudecode", "local_cli"}:
         _record_extraction_failure_status(
             memdir,
             extractor,
             {"reason": f"unsupported_extractor:{extractor}", "error": "unsupported extractor provider"},
         )
         return {
-            "updated": False,
-            "reason": f"unsupported_extractor:{extractor}",
-            "thread_id": thread_id,
-            "memdir": str(memdir),
+            "result": {
+                "updated": False,
+                "reason": f"unsupported_extractor:{extractor}",
+                "thread_id": thread_id,
+                "memdir": str(memdir),
+            }
         }
+    return {
+        "result": None,
+        "raw_cwd": raw_cwd,
+        "thread_id": thread_id,
+        "project_root": project_root,
+        "memdir": memdir,
+        "topics_dir": topics_dir,
+        "manifest_path": manifest_path,
+        "vector_db": vector_db,
+        "before": before,
+        "existing_memories": existing_memories,
+        "extractor": extractor,
+        "user_text": user_text,
+        "assistant_text": assistant_text,
+    }
+
+
+def _run_prepared_extractor(prepared: dict[str, Any]) -> dict[str, Any]:
+    project_root = pathlib.Path(prepared["project_root"])
+    memdir = pathlib.Path(prepared["memdir"])
+    topics_dir = pathlib.Path(prepared["topics_dir"])
+    user_text = str(prepared["user_text"])
+    assistant_text = str(prepared["assistant_text"])
+    existing_memories = str(prepared["existing_memories"])
+    extractor = str(prepared["extractor"])
+
+    if extractor == "codex":
+        return _extract_with_codex(
+            memdir=memdir,
+            project_root=project_root,
+            topics_dir=topics_dir,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            existing_memories=existing_memories,
+        )
+    if extractor == "agy":
+        return _extract_with_agy(
+            memdir=memdir,
+            project_root=project_root,
+            topics_dir=topics_dir,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            existing_memories=existing_memories,
+        )
+    if extractor == "claudecode":
+        return _extract_with_claudecode(
+            memdir=memdir,
+            project_root=project_root,
+            topics_dir=topics_dir,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            existing_memories=existing_memories,
+        )
+    if extractor == "local_cli":
+        return _extract_with_local_cli(
+            memdir=memdir,
+            project_root=project_root,
+            topics_dir=topics_dir,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            existing_memories=existing_memories,
+        )
+    return {"ok": False, "reason": f"unsupported_extractor:{extractor}", "error": "unsupported extractor provider"}
+
+
+def _finalize_extraction_locked(prepared: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
+    raw_cwd = str(prepared["raw_cwd"])
+    thread_id = str(prepared["thread_id"])
+    project_root = pathlib.Path(prepared["project_root"])
+    memdir = pathlib.Path(prepared["memdir"])
+    topics_dir = pathlib.Path(prepared["topics_dir"])
+    manifest_path = pathlib.Path(prepared["manifest_path"])
+    vector_db = pathlib.Path(prepared["vector_db"])
+    before = dict(prepared["before"])
+    extractor = str(prepared["extractor"])
     after_extractor = _snapshot_storage_files(memdir, topics_dir, manifest_path, vector_db)
     extractor_written_paths = _detect_written_paths(before, after_extractor)
     if not result.get("ok"):

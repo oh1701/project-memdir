@@ -27,17 +27,7 @@ _LOCK_STATE = threading.local()
 
 
 @contextlib.contextmanager
-def project_memdir_file_lock() -> Iterator[None]:
-    depth = int(getattr(_LOCK_STATE, "depth", 0))
-    if depth > 0:
-        _LOCK_STATE.depth = depth + 1
-        try:
-            yield
-        finally:
-            _LOCK_STATE.depth -= 1
-        return
-
-    lock_path = project_memdir_lock_path()
+def file_lock(lock_path: pathlib.Path) -> Iterator[None]:
     ensure_dir(lock_path.parent)
     with lock_path.open("a+b") as handle:
         if os.name == "nt":
@@ -49,10 +39,8 @@ def project_memdir_file_lock() -> Iterator[None]:
             handle.seek(0)
             msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
             try:
-                _LOCK_STATE.depth = 1
                 yield
             finally:
-                _LOCK_STATE.depth = 0
                 handle.seek(0)
                 msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
         else:
@@ -60,11 +48,28 @@ def project_memdir_file_lock() -> Iterator[None]:
 
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             try:
-                _LOCK_STATE.depth = 1
                 yield
             finally:
-                _LOCK_STATE.depth = 0
                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+@contextlib.contextmanager
+def project_memdir_file_lock() -> Iterator[None]:
+    depth = int(getattr(_LOCK_STATE, "depth", 0))
+    if depth > 0:
+        _LOCK_STATE.depth = depth + 1
+        try:
+            yield
+        finally:
+            _LOCK_STATE.depth -= 1
+        return
+
+    with file_lock(project_memdir_lock_path()):
+        try:
+            _LOCK_STATE.depth = 1
+            yield
+        finally:
+            _LOCK_STATE.depth = 0
 
 
 def utc_now() -> dt.datetime:
