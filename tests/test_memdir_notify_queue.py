@@ -187,7 +187,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         enqueue.assert_not_called()
         fake_subprocess.Popen.assert_not_called()
         self.assertIn(
-            "[memdir_extract_stop] failed: missing [memdir.extractor].provider; set it to codex, agy or local_cli in",
+            "[memdir_extract_stop] failed: missing [memdir.extractor].provider; set it to codex, agy, claudecode or local_cli in",
             stderr.getvalue(),
         )
         self.assertIn(".project-memdir/harness.toml", stderr.getvalue().replace("\\", "/"))
@@ -219,10 +219,33 @@ class MemdirNotifyQueueTests(unittest.TestCase):
         enqueue.assert_not_called()
         fake_subprocess.Popen.assert_not_called()
         self.assertIn(
-            "[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: bogus; set it to codex, agy or local_cli in",
+            "[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: bogus; set it to codex, agy, claudecode or local_cli in",
             stderr.getvalue(),
         )
         self.assertIn(".project-memdir/harness.toml", stderr.getvalue().replace("\\", "/"))
+
+    def test_stop_hook_accepts_claudecode_extractor_provider(self) -> None:
+        module = _load_module("memdir_stop_claudecode_provider_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
+        payload = {
+            "hookEventName": "Stop",
+            "cwd": "/tmp/project",
+            "thread-id": "thread-1",
+            "input-messages": [{"role": "user", "content": "remember this"}],
+            "last-assistant-message": "ok",
+        }
+        stderr = io.StringIO()
+
+        with (
+            mock.patch.object(module, "load_settings", return_value={"memdir": {"extractor": {"provider": "claudecode"}}}, create=True),
+            mock.patch.object(module.memdir_notify, "queue_agent_turn_complete_event", return_value=0, create=True) as queue,
+            mock.patch.object(module.sys, "stdin", io.StringIO(json.dumps(payload))),
+            mock.patch.object(module.sys, "stderr", stderr),
+        ):
+            exit_code = module.main()
+
+        self.assertEqual(exit_code, 0)
+        queue.assert_called_once()
+        self.assertEqual(stderr.getvalue(), "")
 
     def test_stop_hook_queues_event_and_starts_detached_drain(self) -> None:
         module = _load_module("memdir_stop_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")

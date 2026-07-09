@@ -22,9 +22,9 @@ from harness_lib.settings import HARNESS_CONFIG_PATH, load_settings  # noqa: E40
 
 MISSING_EXTRACTOR_PROVIDER_MESSAGE = (
     "[memdir_extract_stop] failed: missing [memdir.extractor].provider; "
-    f"set it to codex, agy or local_cli in {HARNESS_CONFIG_PATH}"
+    f"set it to codex, agy, claudecode or local_cli in {HARNESS_CONFIG_PATH}"
 )
-SUPPORTED_EXTRACTOR_PROVIDERS = {"codex", "agy", "local_cli"}
+SUPPORTED_EXTRACTOR_PROVIDERS = {"codex", "agy", "claudecode", "local_cli"}
 SUPPORTED_CLIENTS = {"claude", "codex"}
 
 
@@ -65,7 +65,7 @@ def _extractor_provider(settings: dict[str, Any]) -> str:
 def _unsupported_extractor_provider_message(provider: str) -> str:
     return (
         f"[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: {provider}; "
-        f"set it to codex, agy or local_cli in {HARNESS_CONFIG_PATH}"
+        f"set it to codex, agy, claudecode or local_cli in {HARNESS_CONFIG_PATH}"
     )
 
 

@@ -36,6 +36,7 @@ LOCAL_HASH_PROVIDER = "local_hash"
 LOCAL_HASH_MODEL = "memdir-local-hash"
 CODEX_DEFAULT_MODEL = "codex-default-model"
 AGY_DEFAULT_MODEL = "agy-default-model"
+CLAUDECODE_DEFAULT_MODEL = "claudecode-default-model"
 CLOUDFLARE_EMBEDDING_BATCH_SIZE = 100
 MEMORY_TYPES = ("user", "feedback", "project", "reference")
 VECTOR_LEGACY_ALIASES = {
@@ -58,6 +59,9 @@ EXTRACTOR_LEGACY_ALIASES = {
     "extract_agy_bin": "agy_bin",
     "extract_agy_extraction_timeout_sec": "agy_extraction_timeout_sec",
     "extract_agy_model": "agy_model",
+    "extract_claudecode_command": "claudecode_command",
+    "extract_claudecode_extraction_timeout_sec": "claudecode_extraction_timeout_sec",
+    "extract_claudecode_model": "claudecode_model",
     "extract_local_cli_command": "local_cli_command",
     "extract_local_cli_extraction_timeout_sec": "local_cli_extraction_timeout_sec",
 }
@@ -793,6 +797,7 @@ def _extractor_model_for_context() -> str:
     model_defaults = {
         "codex": ("codex_model", CODEX_DEFAULT_MODEL),
         "agy": ("agy_model", AGY_DEFAULT_MODEL),
+        "claudecode": ("claudecode_model", CLAUDECODE_DEFAULT_MODEL),
     }
     model_config = model_defaults.get(provider)
     if not model_config:
@@ -2037,6 +2042,78 @@ def _extract_with_agy(
     return {"ok": True, "reason": "ok"}
 
 
+def _extract_with_claudecode(
+    *,
+    memdir: pathlib.Path,
+    project_root: pathlib.Path,
+    topics_dir: pathlib.Path,
+    user_text: str,
+    assistant_text: str,
+    existing_memories: str,
+) -> dict[str, Any]:
+    settings = _extractor_settings()
+    prompt = _build_extraction_prompt(
+        project_root=project_root,
+        memdir=memdir,
+        topics_dir=topics_dir,
+        user_text=user_text,
+        assistant_text=assistant_text,
+        existing_memories=existing_memories,
+    )
+    command_template = os.path.expandvars(str(settings.get("claudecode_command") or "claude").strip())
+    command = _split_command_template(command_template)
+    if not command:
+        return {
+            "ok": False,
+            "reason": "claudecode_extraction_failed",
+            "error": "extract_claudecode_command parsed to no executable",
+        }
+    command.extend(["-p", prompt, "--dangerously-skip-permissions"])
+    model = _configured_extractor_model(settings, "claudecode_model", CLAUDECODE_DEFAULT_MODEL)
+    if model:
+        command.extend(["--model", model])
+    ensure_dir(topics_dir)
+    env = {
+        **os.environ,
+        "CODEX_MEMDIR_SKIP": "1",
+        "CODEX_PROJECT_KNOWLEDGE_SKIP": "1",
+        "CODEX_HARNESS_SKIP_SESSION_START": "1",
+    }
+    try:
+        result = subprocess.run(
+            command,
+            cwd=topics_dir,
+            text=True,
+            capture_output=True,
+            timeout=int(settings.get("claudecode_extraction_timeout_sec", settings.get("timeout_sec", 90))),
+            env=env,
+            **_no_window_kwargs(),
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "ok": False,
+            "reason": "claudecode_extraction_failed",
+            "error": f"timeout:{exc.timeout}",
+            "stdout": str(exc.stdout or "")[:800],
+            "stderr": str(exc.stderr or "")[:800],
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "reason": "claudecode_extraction_failed",
+            "error": str(exc)[:240],
+        }
+    if result.returncode != 0:
+        return {
+            "ok": False,
+            "reason": "claudecode_extraction_failed",
+            "returncode": result.returncode,
+            "stderr": (result.stderr or "")[:800],
+            "stdout": (result.stdout or "")[:800],
+        }
+    return {"ok": True, "reason": "ok"}
+
+
 def _extract_with_local_cli(
     *,
     memdir: pathlib.Path,
@@ -2204,6 +2281,15 @@ def _extract_memories_from_event_locked(
         )
     elif extractor == "agy":
         result = _extract_with_agy(
+            memdir=memdir,
+            project_root=project_root,
+            topics_dir=topics_dir,
+            user_text=user_text,
+            assistant_text=assistant_text,
+            existing_memories=existing_memories,
+        )
+    elif extractor == "claudecode":
+        result = _extract_with_claudecode(
             memdir=memdir,
             project_root=project_root,
             topics_dir=topics_dir,

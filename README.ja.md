@@ -95,6 +95,24 @@ agy_bin = "agy"
 agy_model = "agy-default-model"
 ```
 
+Claude Code を file-writing extractor として使用することもできます。
+
+```toml
+[memdir.extractor]
+provider = "claudecode"
+claudecode_command = "claude"
+claudecode_model = "claudecode-default-model"
+```
+
+Ollama の Claude Code integration で test する場合は、Ollama launch flag を `claudecode_command` に置き、memdir が後ろに追加する Claude Code arguments の前に `--` 区切りを含めます。
+
+```toml
+[memdir.extractor]
+provider = "claudecode"
+claudecode_command = "ollama launch claude --model gemma4:31b-cloud --"
+claudecode_model = ""
+```
+
 file を直接書き込む local command も使用できます。
 
 ```toml
@@ -182,6 +200,7 @@ project_dir_name = ".project-memdir"
 - Codex or Claude Code plugin support
 - Optional: `codex` CLI for the `codex` extractor
 - Optional: `agy` CLI for the `agy` extractor
+- Optional: `claude` CLI or an Ollama Claude Code integration for the `claudecode` extractor
 - Optional: Cloudflare Workers AI credentials for remote embeddings
 
 macOS と Linux では、Codex hooks は `sh` と bundled launcher を使い、`python3` を試してから `python` を試します。Manual CLI launcher も同じ順序で fallback します。

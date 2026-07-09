@@ -54,12 +54,14 @@ query_cache_max_entries = 256
 
 # Supported values:
 # - "agy": uses `agy -p ...` and can select a model with `agy_model`.
+# - "claudecode": uses `claude -p ...` or a compatible launch command.
 # - "codex": uses `codex exec` to write topic JSON files.
 # - "local_cli": sends the extraction prompt to a local command through stdin or `{prompt}`.
 #   For local CLI, only configure an agent or command that can create topic JSON result files.
 # Choose one provider before relying on automatic Stop hook extraction.
 # Keep "codex-default-model" or "" to use the Codex CLI default model.
 # Keep "agy-default-model" or "" to use the agy CLI default model.
+# Keep "claudecode-default-model" or "" to use the Claude Code CLI default model.
 # The bundled example extractor is deterministic and safe to run by default.
 # If a file-writing agent requires the prompt as an argument instead of stdin,
 # include `{prompt}` in that agent command.
@@ -73,6 +75,10 @@ codex_model = ""
 agy_bin = "agy"
 agy_extraction_timeout_sec = 90
 agy_model = "agy-default-model"
+
+claudecode_command = "claude"
+claudecode_extraction_timeout_sec = 90
+claudecode_model = "claudecode-default-model"
 
 local_cli_command = 'python "${CODEX_ROOT}/examples/local_extractor.py"'
 local_cli_extraction_timeout_sec = 30

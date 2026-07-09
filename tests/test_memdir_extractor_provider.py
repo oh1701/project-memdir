@@ -207,6 +207,8 @@ class MemdirExtractorProviderTests(unittest.TestCase):
             ("codex", "codex_model", "", "codex-default-model"),
             ("agy", "agy_model", "agy-default-model", "agy-default-model"),
             ("agy", "agy_model", "", "agy-default-model"),
+            ("claudecode", "claudecode_model", "claudecode-default-model", "claudecode-default-model"),
+            ("claudecode", "claudecode_model", "", "claudecode-default-model"),
         ]
 
         for provider, model_key, model_value, expected_model in cases:
@@ -359,6 +361,201 @@ class MemdirExtractorProviderTests(unittest.TestCase):
         self.assertFalse(result["updated"])
         self.assertEqual(result["reason"], "agy_extraction_failed")
         self.assertEqual(result["extractor"], "agy")
+
+    def test_claudecode_provider_runs_claude_code_process_from_topics_dir(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_run(
+            args: list[str],
+            *,
+            cwd: pathlib.Path,
+            text: bool,
+            capture_output: bool,
+            timeout: int,
+            env: dict[str, str],
+            **kwargs: object,
+        ) -> subprocess.CompletedProcess[str]:
+            captured["args"] = args
+            captured["cwd"] = cwd
+            captured["text"] = text
+            captured["capture_output"] = capture_output
+            captured["timeout"] = timeout
+            captured["env"] = env
+            captured.update(kwargs)
+            pathlib.Path(cwd).mkdir(parents=True, exist_ok=True)
+            (pathlib.Path(cwd) / "claudecode-topic.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 2,
+                        "id": "claudecode-topic",
+                        "name": "Claude Code topic",
+                        "description": "Created by claudecode provider.",
+                        "type": "reference",
+                        "content": "Claude Code provider writes topic JSON.",
+                        "keywords": ["claudecode"],
+                        "updated_at": "2026-04-21T00:00:00Z",
+                        "last_thread_id": "thread-claudecode",
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+            settings = _settings(tmp / "memdir", "claudecode")
+            settings["extractor"].update(
+                {
+                    "claudecode_command": "ollama launch claude --model gemma4:31b-cloud --",
+                    "claudecode_extraction_timeout_sec": 13,
+                    "claudecode_model": "",
+                }
+            )
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
+                mock.patch("subprocess.run", side_effect=fake_run) as run_claudecode,
+            ):
+                result = memdir.extract_memories_from_event(
+                    raw_cwd=str(project),
+                    user_text="remember via claude code",
+                    assistant_text="ok",
+                    thread_id="thread-claudecode",
+                )
+
+        self.assertTrue(result["updated"])
+        self.assertEqual(result["extractor"], "claudecode")
+        self.assertTrue(result["topic_files"])
+        self.assertEqual(captured["args"][0:6], ["ollama", "launch", "claude", "--model", "gemma4:31b-cloud", "--"])
+        self.assertEqual(captured["args"][6:7], ["-p"])
+        self.assertIn("Only create or modify JSON files under the topics directory.", captured["args"][7])
+        self.assertEqual(captured["args"][8:], ["--dangerously-skip-permissions"])
+        self.assertEqual(captured["cwd"], pathlib.Path(result["memdir"]) / "topics")
+        self.assertIs(captured["text"], True)
+        self.assertIs(captured["capture_output"], True)
+        self.assertEqual(captured["timeout"], 13)
+        self.assertEqual(captured["env"]["CODEX_MEMDIR_SKIP"], "1")
+        self.assertEqual(captured["env"]["CODEX_PROJECT_KNOWLEDGE_SKIP"], "1")
+        self.assertEqual(captured["env"]["CODEX_HARNESS_SKIP_SESSION_START"], "1")
+        if memdir.os.name == "nt":
+            self.assertEqual(
+                captured["creationflags"],
+                getattr(memdir.subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        run_claudecode.assert_called_once()
+
+    def test_claudecode_provider_uses_cli_default_for_default_model_sentinel(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_run(
+            args: list[str],
+            *,
+            cwd: pathlib.Path,
+            text: bool,
+            capture_output: bool,
+            timeout: int,
+            env: dict[str, str],
+            **kwargs: object,
+        ) -> subprocess.CompletedProcess[str]:
+            captured["args"] = args
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            settings = _settings(tmp / "settings", "claudecode")
+            settings["extractor"].update({"claudecode_model": "claudecode-default-model"})
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
+                mock.patch("subprocess.run", side_effect=fake_run),
+            ):
+                result = memdir._extract_with_claudecode(
+                    memdir=tmp / "memdir",
+                    project_root=tmp / "project",
+                    topics_dir=tmp / "memdir" / "topics",
+                    user_text="remember via claude code",
+                    assistant_text="ok",
+                    existing_memories="",
+                )
+
+        self.assertTrue(result["ok"])
+        self.assertNotIn("--model", captured["args"])
+
+    def test_claudecode_provider_can_select_model(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_run(
+            args: list[str],
+            *,
+            cwd: pathlib.Path,
+            text: bool,
+            capture_output: bool,
+            timeout: int,
+            env: dict[str, str],
+            **kwargs: object,
+        ) -> subprocess.CompletedProcess[str]:
+            captured["args"] = args
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="ok", stderr="")
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            settings = _settings(tmp / "settings", "claudecode")
+            settings["extractor"].update({"claudecode_command": "claude", "claudecode_model": "sonnet"})
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value={"memdir": settings}),
+                mock.patch("subprocess.run", side_effect=fake_run),
+            ):
+                result = memdir._extract_with_claudecode(
+                    memdir=tmp / "memdir",
+                    project_root=tmp / "project",
+                    topics_dir=tmp / "memdir" / "topics",
+                    user_text="remember via claude code",
+                    assistant_text="ok",
+                    existing_memories="",
+                )
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(captured["args"][0], "claude")
+        self.assertEqual(captured["args"][-2:], ["--model", "sonnet"])
+
+    def test_claudecode_provider_reports_nonzero_exit(self) -> None:
+        def fake_run(
+            args: list[str],
+            *,
+            cwd: pathlib.Path,
+            text: bool,
+            capture_output: bool,
+            timeout: int,
+            env: dict[str, str],
+        ) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(args=args, returncode=2, stdout="bad output", stderr="denied")
+
+        with tempfile.TemporaryDirectory() as raw_tmp:
+            tmp = pathlib.Path(raw_tmp)
+            project = tmp / "project"
+            project.mkdir()
+            (project / "AGENTS.md").write_text("# temp\n", encoding="utf-8")
+            settings = {"memdir": _settings(tmp / "memdir", "claudecode")}
+
+            with (
+                mock.patch.object(memdir, "load_settings", return_value=settings),
+                mock.patch("subprocess.run", side_effect=fake_run),
+            ):
+                result = memdir.extract_memories_from_event(
+                    raw_cwd=str(project),
+                    user_text="remember via claude code",
+                    assistant_text="ok",
+                    thread_id="thread-claudecode-failed",
+                )
+
+        self.assertFalse(result["updated"])
+        self.assertEqual(result["reason"], "claudecode_extraction_failed")
+        self.assertEqual(result["extractor"], "claudecode")
 
     def test_extraction_failure_is_reported_only_in_user_prompt_submit_context(self) -> None:
         def fake_run(

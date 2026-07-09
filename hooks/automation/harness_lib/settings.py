@@ -49,6 +49,8 @@ DEFAULTS: dict[str, Any] = {
             "codex_sandbox": "danger-full-access",
             "codex_model": "codex-default-model",
             "agy_model": "agy-default-model",
+            "claudecode_command": "claude",
+            "claudecode_model": "claudecode-default-model",
         },
     },
 }
@@ -138,6 +140,9 @@ def _normalize_memdir_runtime_sections(payload: dict[str, Any]) -> None:
             "extract_agy_bin": "agy_bin",
             "extract_agy_extraction_timeout_sec": "agy_extraction_timeout_sec",
             "extract_agy_model": "agy_model",
+            "extract_claudecode_command": "claudecode_command",
+            "extract_claudecode_extraction_timeout_sec": "claudecode_extraction_timeout_sec",
+            "extract_claudecode_model": "claudecode_model",
             "extract_local_cli_command": "local_cli_command",
             "extract_local_cli_extraction_timeout_sec": "local_cli_extraction_timeout_sec",
         },
