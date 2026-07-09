@@ -57,14 +57,14 @@ plugin 随附的默认模板是 `harness.toml.example`。
 如果想在安装后立即创建，请在当前 release 的 installed plugin cache path 中运行对应 OS 的命令。
 
 ```sh
-cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.10
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.11
 sh hooks/automation/memdir_cli.sh init-config
 ```
 
 在 Windows 上，请以 PowerShell 为准执行。
 
 ```powershell
-cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.10
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.11
 .\hooks\automation\memdir_cli.cmd init-config
 ```
 
