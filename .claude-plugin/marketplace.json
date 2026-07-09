@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Project Memdir plugin for Claude Code.",
-    "version": "1.0.9"
+    "version": "1.0.10"
   },
   "plugins": [
     {
       "name": "project-memdir",
       "description": "Project-local memory injection and extraction helpers for Claude Code.",
-      "version": "1.0.9",
+      "version": "1.0.10",
       "author": {
         "name": "project-memdir maintainers"
       },

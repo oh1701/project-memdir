@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "project-memdir",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Project-local memory injection and extraction helpers for Claude Code.",
   "author": {
     "name": "project-memdir maintainers"

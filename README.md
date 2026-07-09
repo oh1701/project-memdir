@@ -57,14 +57,14 @@ If this file does not exist, the next `SessionStart` hook creates it from `harne
 To create it immediately after installation, run the command for your OS from this release's installed plugin cache path.
 
 ```sh
-cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.9
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.10
 sh hooks/automation/memdir_cli.sh init-config
 ```
 
 On Windows, use PowerShell:
 
 ```powershell
-cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.9
+cd ~/.codex/plugins/cache/project-memdir-local/project-memdir/1.0.10
 .\hooks\automation\memdir_cli.cmd init-config
 ```
 

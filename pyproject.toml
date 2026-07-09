@@ -1,6 +1,6 @@
 [project]
 name = "project-memdir"
-version = "1.0.9"
+version = "1.0.10"
 description = "Project-scoped long-term memory hooks for Codex and Claude Code"
 requires-python = ">=3.11"
 readme = "README.md"
