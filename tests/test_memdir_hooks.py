@@ -496,6 +496,19 @@ class MemdirHookTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("stop failed", stderr.getvalue())
 
+    def test_stop_dispatcher_skips_when_memdir_skip_env_is_set(self) -> None:
+        module = _load_hook_module()
+        fake_stop = mock.Mock()
+
+        with (
+            mock.patch.dict(os.environ, {"CODEX_MEMDIR_SKIP": "1"}),
+            mock.patch.dict(sys.modules, {"memdir_stop": fake_stop}),
+        ):
+            code = module._stop()
+
+        self.assertEqual(code, 0)
+        fake_stop.main.assert_not_called()
+
     def test_stop_dispatcher_returns_failed_when_notify_main_raises(self) -> None:
         module = _load_hook_module()
         stderr = io.StringIO()

@@ -181,6 +181,9 @@ def _user_prompt_submit() -> int:
 
 
 def _stop() -> int:
+    if os.environ.get("CODEX_MEMDIR_SKIP") == "1":
+        return 0
+
     try:
         os.environ.setdefault("PROJECT_MEMDIR_CLIENT", "codex")
         if str(NOTIFY_DIR) not in sys.path:
