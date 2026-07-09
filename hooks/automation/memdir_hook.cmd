@@ -4,6 +4,8 @@ rem Purpose: Avoid shell fallback operators in Codex hook manifests.
 setlocal
 
 set "SCRIPT_DIR=%~dp0"
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
 
 call :run py -3 "%SCRIPT_DIR%memdir_hook.py" %*
 set "HOOK_STATUS=%ERRORLEVEL%"

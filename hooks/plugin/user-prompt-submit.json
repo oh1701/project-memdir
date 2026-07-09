@@ -6,7 +6,7 @@
           {
             "type": "command",
             "command": "sh \"${PLUGIN_ROOT}/hooks/automation/memdir_hook.sh\" user-prompt-submit",
-            "commandWindows": "py -3 \"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.py\" user-prompt-submit",
+            "commandWindows": "cmd.exe /d /c \"\"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.cmd\" user-prompt-submit\"",
             "timeout": 20
           }
         ]

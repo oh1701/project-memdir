@@ -32,8 +32,8 @@ def _plugin_windows_dispatch_command(action: str) -> str:
     if action == "stop":
         script = '"${PLUGIN_ROOT}\\hooks\\automation\\memdir_stop_hidden.ps1"'
         return f"powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {script}"
-    script = '"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.py"'
-    return f"py -3 {script} {action}"
+    script = '"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.cmd"'
+    return f'cmd.exe /d /c "{script} {action}"'
 
 
 def _claude_plugin_dispatch_command(action: str) -> str:
@@ -340,10 +340,11 @@ class MemdirHookTests(unittest.TestCase):
                 else:
                     self.assertEqual(
                         command["commandWindows"],
-                        f'py -3 "${{PLUGIN_ROOT}}\\hooks\\automation\\memdir_hook.py" {action}',
+                        f'cmd.exe /d /c ""${{PLUGIN_ROOT}}\\hooks\\automation\\memdir_hook.cmd" {action}"',
                     )
-                    self.assertRegex(command["commandWindows"], r"^py -3\b")
-                    self.assertIn("memdir_hook.py", command["commandWindows"])
+                    self.assertRegex(command["commandWindows"], r"^cmd\.exe /d /c\b")
+                    self.assertIn("memdir_hook.cmd", command["commandWindows"])
+                    self.assertNotIn("memdir_hook.py", command["commandWindows"])
 
     def test_claude_plugin_hooks_use_cross_platform_node_dispatcher(self) -> None:
         hook = json.loads((ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
@@ -416,6 +417,8 @@ class MemdirHookTests(unittest.TestCase):
     def test_windows_hook_launcher_uses_python_launchers_without_shell_fallback_operator(self) -> None:
         launcher = (ROOT / "hooks" / "automation" / "memdir_hook.cmd").read_text(encoding="utf-8")
 
+        self.assertIn('set "PYTHONUTF8=1"', launcher)
+        self.assertIn('set "PYTHONIOENCODING=utf-8"', launcher)
         self.assertIn("py -3", launcher)
         self.assertIn("python", launcher)
         self.assertIn("python3", launcher)

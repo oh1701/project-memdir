@@ -11,6 +11,16 @@ import sys
 from typing import Any
 
 
+def _force_utf8_stdio() -> None:
+    for stream_name in ("stdin", "stdout", "stderr"):
+        stream = getattr(sys, stream_name)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
+_force_utf8_stdio()
+
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 PLUGIN_ROOT = SCRIPT_DIR.parents[1]
 NOTIFY_DIR = PLUGIN_ROOT / "scripts" / "notify"

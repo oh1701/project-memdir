@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "sh \"${PLUGIN_ROOT}/hooks/automation/memdir_hook.sh\" session-start",
-            "commandWindows": "py -3 \"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.py\" session-start",
+            "commandWindows": "cmd.exe /d /c \"\"${PLUGIN_ROOT}\\hooks\\automation\\memdir_hook.cmd\" session-start\"",
             "timeout": 30
           }
         ]

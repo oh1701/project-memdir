@@ -190,7 +190,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
             "[memdir_extract_stop] failed: missing [memdir.extractor].provider; set it to codex, agy or local_cli in",
             stderr.getvalue(),
         )
-        self.assertIn(".project-memdir/harness.toml", stderr.getvalue())
+        self.assertIn(".project-memdir/harness.toml", stderr.getvalue().replace("\\", "/"))
 
     def test_stop_hook_fails_with_unsupported_extractor_provider(self) -> None:
         module = _load_module("memdir_stop_unsupported_provider_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
@@ -222,7 +222,7 @@ class MemdirNotifyQueueTests(unittest.TestCase):
             "[memdir_extract_stop] failed: unsupported [memdir.extractor].provider: bogus; set it to codex, agy or local_cli in",
             stderr.getvalue(),
         )
-        self.assertIn(".project-memdir/harness.toml", stderr.getvalue())
+        self.assertIn(".project-memdir/harness.toml", stderr.getvalue().replace("\\", "/"))
 
     def test_stop_hook_queues_event_and_starts_detached_drain(self) -> None:
         module = _load_module("memdir_stop_under_test", ROOT / "scripts" / "notify" / "memdir_stop.py")
